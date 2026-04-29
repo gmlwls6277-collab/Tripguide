@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>해외일정 플래너</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1929;
+    --surface2: #252438;
+    --accent: #e8c547;
+    --accent2: #ff6b6b;
+    --accent3: #64dfdf;
+    --text: #fffffe;
+    --text-muted: #a7a9be;
+    --border: rgba(255,255,255,0.08);
+    --radius: 16px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    position: sticky; top:0; z-index:100;
+    background: rgba(15,14,23,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .logo { font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--accent); letter-spacing:-0.5px; }
+  .logo span { font-style:italic; color:var(--text); }
+  .tab-nav { display:flex; gap:4px; }
+  .tab-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted); font-family:'Noto Sans KR',sans-serif;
+    font-size:.85rem; padding:6px 14px; border-radius:20px;
+    transition: all .2s;
+  }
+  .tab-btn.active { background:var(--surface2); color:var(--text); }
+  .tab-btn:hover:not(.active) { color:var(--text); }
+
+  /* ── Layout ── */
+  .app { max-width:1100px; margin:0 auto; padding:28px 24px; }
+  .page { display:none; }
+  .page.active { display:block; animation: fadeUp .4s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+
+  /* ── Trip Cards ── */
+  .section-header {
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;
+  }
+  .section-title { font-size:1.3rem; font-weight:700; }
+  .btn-primary {
+    background:var(--accent); color:#000; border:none; cursor:pointer;
+    padding:9px 20px; border-radius:24px; font-size:.85rem; font-weight:700;
+    font-family:'Noto Sans KR',sans-serif; transition: transform .15s, box-shadow .15s;
+  }
+  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(232,197,71,0.35); }
+  .trips-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+  .trip-card {
+    background:var(--surface); border-radius:var(--radius);
+    border:1px solid var(--border); padding:22px;
+    cursor:pointer; transition: transform .2s, border-color .2s;
+    position:relative; overflow:hidden;
+  }
+  .trip-card:hover { transform:translateY(-4px); border-color:var(--accent); }
+  .trip-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+  }
+  .trip-emoji { font-size:2rem; margin-bottom:10px; }
+  .trip-name { font-size:1.1rem; font-weight:700; margin-bottom:4px; }
+  .trip-dates { font-size:.8rem; color:var(--text-muted); margin-bottom:14px; }
+  .trip-progress-bar {
+    background: rgba(255,255,255,0.08); border-radius:4px; height:6px; margin-bottom:6px;
+  }
+  .trip-progress-fill {
+    height:100%; border-radius:4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    transition: width .5s ease;
+  }
+  .trip-progress-label { font-size:.75rem; color:var(--text-muted); }
+  .trip-actions { display:flex; gap:8px; margin-top:14px; }
+  .btn-sm {
+    flex:1; padding:7px; border-radius:8px; border:1px solid var(--border);
+    background:none; color:var(--text-muted); cursor:pointer; font-size:.8rem;
+    font-family:'Noto Sans KR',sans-serif; transition:all .15s;
+  }
+  .btn-sm:hover { background:var(--surface2); color:var(--text); }
+  .btn-danger:hover { border-color:var(--accent2); color:var(--accent2); }
+  .empty-state {
+    text-align:center; padding:60px 20px; color:var(--text-muted);
+  }
+  .empty-state .icon { font-size:3.5rem; margin-bottom:12px; }
+  .empty-state p { font-size:.95rem; }
+
+  /* ── Trip Detail (Schedule + Checklist) ── */
+  .detail-header {
+    display:flex; align-items:center; gap:12px; margin-bottom:24px;
+  }
+  .back-btn {
+    background:var(--surface2); border:none; color:var(--text);
+    width:38px; height:38px; border-radius:50%; cursor:pointer; font-size:1rem;
+    display:flex; align-items:center; justify-content:center; transition:background .15s;
+  }
+  .back-btn:hover { background:var(--surface); }
+  .detail-title { font-size:1.5rem; font-weight:700; }
+  .detail-subtitle { font-size:.85rem; color:var(--text-muted); margin-top:2px; }
+
+  /* tabs inside detail */
+  .inner-tabs { display:flex; gap:8px; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:0; }
+  .inner-tab {
+    background:none; border:none; cursor:pointer; color:var(--text-muted);
+    font-family:'Noto Sans KR',sans-serif; font-size:.9rem; padding:8px 16px;
+    border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .15s;
+  }
+  .inner-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+  /* Schedule — timeline design */
+  .day-block { margin-bottom:32px; }
+  .day-header {
+    display:flex; align-items:center; gap:12px; margin-bottom:16px;
+    padding-bottom:12px; border-bottom:1px solid var(--border);
+  }
+  .day-badge {
+    background:var(--accent); color:#000; font-weight:700; font-size:.72rem;
+    padding:4px 12px; border-radius:20px; letter-spacing:.5px;
+  }
+  .day-date-label { font-size:.9rem; font-weight:500; }
+  .day-weekday { font-size:.8rem; color:var(--text-muted); }
+  .day-event-count { margin-left:auto; font-size:.75rem; color:var(--text-muted); background:var(--surface2); padding:3px 10px; border-radius:10px; }
+
+  /* Day tabs */
+  .day-tab-bar {
+    display:flex; gap:6px; flex-wrap:wrap;
+    margin-bottom:20px; padding-bottom:16px;
+    border-bottom:1px solid var(--border);
+  }
+  .day-tab {
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:8px 16px; cursor:pointer;
+    transition:all .2s; min-width:72px; position:relative;
+    font-family:'Noto Sans KR',sans-serif;
+  }
+  .day-tab:hover { border-color:var(--accent); }
+  .day-tab.active {
+    background:var(--accent); border-color:var(--accent);
+  }
+  .day-tab-num {
+    font-size:.75rem; font-weight:700; color:var(--text-muted);
+  }
+  .day-tab.active .day-tab-num { color:#000; }
+  .day-tab-date {
+    font-size:.72rem; color:var(--text-muted);
+  }
+  .day-tab.active .day-tab-date { color:rgba(0,0,0,0.6); }
+  .day-tab-count {
+    position:absolute; top:-6px; right:-6px;
+    background:var(--accent2); color:#fff; font-size:.6rem; font-weight:700;
+    width:16px; height:16px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .day-tab.active .day-tab-count { background:#000; color:var(--accent); }
+
+  /* Timeline */
+  .timeline { position:relative; padding-left:20px; }
+  .timeline::before {
+    content:''; position:absolute; left:6px; top:0; bottom:0;
+    width:1px; background: linear-gradient(to bottom, var(--accent), transparent);
+  }
+  .tl-item {
+    position:relative; margin-bottom:6px;
+  }
+  .tl-dot {
+    position:absolute; left:-17px; top:14px;
+    width:9px; height:9px; border-radius:50%;
+    border:2px solid var(--surface); flex-shrink:0;
+  }
+  .tl-dot.transport { background:#a78bfa; }
+  .tl-dot.food      { background:#f97316; }
+  .tl-dot.hotel     { background:#22d3ee; }
+  .tl-dot.activity  { background:var(--accent); }
+  .tl-dot.other     { background:var(--text-muted); }
+
+  .tl-card {
+    background:var(--surface); border-radius:12px;
+    border:1px solid var(--border);
+    overflow:hidden; transition:border-color .2s;
+  }
+  .tl-card:hover { border-color:rgba(255,255,255,0.15); }
+
+  .tl-card-head {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 14px; cursor:pointer;
+  }
+  .tl-time {
+    font-size:.78rem; font-weight:600; font-family:monospace;
+    color:var(--text-muted); min-width:42px; flex-shrink:0;
+  }
+  .tl-type-badge {
+    font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:8px;
+    flex-shrink:0; letter-spacing:.3px;
+  }
+  .tl-type-badge.transport { background:rgba(167,139,250,.15); color:#a78bfa; }
+  .tl-type-badge.food      { background:rgba(249,115,22,.15);  color:#f97316; }
+  .tl-type-badge.hotel     { background:rgba(34,211,238,.15);  color:#22d3ee; }
+  .tl-type-badge.activity  { background:rgba(232,197,71,.15);  color:var(--accent); }
+  .tl-type-badge.other     { background:rgba(167,169,190,.15); color:var(--text-muted); }
+
+  .tl-name { font-size:.9rem; font-weight:600; flex:1; }
+  /* Event done / past state */
+  .tl-card.done { opacity:0.45; }
+  .tl-card.done .tl-name { text-decoration:line-through; color:var(--text-muted); }
+  .tl-card.past-card { opacity:0.6; }
+  .tl-past-badge {
+    font-size:.65rem; font-weight:700; padding:2px 7px; border-radius:8px;
+    background:rgba(167,169,190,.15); color:var(--text-muted);
+    flex-shrink:0; margin-left:auto;
+  }
+  .tl-past-badge.done-badge { background:rgba(100,223,223,.15); color:var(--accent3); }
+  .tl-arrow {
+    font-size:.7rem; color:var(--text-muted); margin-left:4px; flex-shrink:0;
+  }
+  .tl-done-btn {
+    width:22px; height:22px; border-radius:50%; border:2px solid var(--border);
+    background:none; cursor:pointer; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .15s;
+  }
+  .tl-done-btn:hover { border-color:var(--accent3); }
+  .tl-done-btn.checked { background:var(--accent3); border-color:var(--accent3); }
+  .tl-done-btn.checked svg polyline { stroke:#000; }
+
+  .tl-edit-btn {
+    background:var(--surface2); border:1px solid var(--border); color:var(--text-muted);
+    cursor:pointer; font-size:.72rem; padding:3px 9px; border-radius:7px;
+    flex-shrink:0; transition:all .15s;
+  }
+  .tl-edit-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .tl-delete-btn {
+    background:none; border:none; color:var(--text-muted); cursor:pointer;
+    font-size:.85rem; padding:3px 6px; transition:color .15s; flex-shrink:0;
+  }
+  .tl-delete-btn:hover { color:var(--accent2); }
+
+  .tl-note-body {
+    padding:0 14px 12px 14px;
+    border-top:1px solid var(--border);
+    display:flex; flex-direction:column; gap:5px; padding-top:10px;
+  }
+  .tl-note-line {
+    display:flex; align-items:flex-start; gap:8px;
+    font-size:.8rem; color:var(--text-muted); line-height:1.6;
+  }
+  .tl-note-line.hl { color:var(--accent3); }
+  .tl-note-dot {
+    width:5px; height:5px; border-radius:50%;
+    background:var(--text-muted); flex-shrink:0; margin-top:6px;
+  }
+  .tl-note-line.hl .tl-note-dot { background:var(--accent3); }
+
+  .add-event-form {
+    background:var(--surface); border-radius:var(--radius); padding:18px;
+    border:1px dashed var(--border); margin-top:8px;
+  }
+  .form-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .form-group { flex:1; min-width:120px; }
+  .form-group label { display:block; font-size:.75rem; color:var(--text-muted); margin-bottom:4px; }
+  .form-input, .form-select {
+    width:100%; background:var(--surface2); border:1px solid var(--border);
+    border-radius:8px; padding:8px 12px; color:var(--text); font-size:.85rem;
+    font-family:'Noto Sans KR',sans-serif; outline:none; transition:border-color .15s;
+  }
+  .form-input:focus, .form-select:focus { border-color:var(--accent); }
+  .form-select option { background:var(--surface2); }
+  .btn-add {
+    background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    padding:8px 16px; border-radius:8px; cursor:pointer; font-size:.85rem;
+    font-family:'Noto Sans KR',sans-serif; transition:all .15s; margin-top:10px;
+  }
+  .btn-add:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* Checklist */
+  .checklist-cats { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+  .cat-chip {
+    background:var(--surface2); border:1px solid var(--border); border-radius:16px;
+    padding:5px 14px; font-size:.8rem; cursor:pointer; color:var(--text-muted);
+    transition:all .15s;
+  }
+  .cat-chip.active { background:var(--accent); border-color:var(--accent); color:#000; font-weight:700; }
+
+  .checklist-section { margin-bottom:20px; }
+  .checklist-section-title {
+    font-size:.8rem; font-weight:700; color:var(--text-muted);
+    text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;
+  }
+  .check-item {
+    display:flex; align-items:center; gap:12px;
+    background:var(--surface); border-radius:10px; padding:12px 14px;
+    margin-bottom:6px; transition:opacity .2s;
+  }
+  .check-item.done { opacity:.5; }
+  .check-item.done .check-label { text-decoration:line-through; }
+  .custom-check {
+    width:20px; height:20px; border-radius:6px;
+    border:2px solid var(--border); background:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:all .15s;
+  }
+  .custom-check.checked { background:var(--accent); border-color:var(--accent); }
+  .check-label { flex:1; font-size:.9rem; }
+  .check-delete { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:.9rem; }
+  .check-delete:hover { color:var(--accent2); }
+
+  .add-check-row { display:flex; gap:8px; margin-top:10px; }
+  .add-check-row .form-input { flex:1; }
+
+  /* Modal */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.7);
+    z-index:200; display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+  }
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+  .modal {
+    background:var(--surface); border-radius:20px; padding:28px; width:min(480px,92vw);
+    border:1px solid var(--border); transform:scale(.95); transition:transform .2s;
+  }
+  .modal-overlay.open .modal { transform:scale(1); }
+  .modal-title { font-size:1.2rem; font-weight:700; margin-bottom:20px; }
+  .modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+  .btn-cancel {
+    background:none; border:1px solid var(--border); color:var(--text-muted);
+    padding:9px 20px; border-radius:24px; cursor:pointer; font-size:.85rem;
+    font-family:'Noto Sans KR',sans-serif;
+  }
+
+  /* Stats */
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; margin-bottom:28px; }
+  .stat-card {
+    background:var(--surface); border-radius:var(--radius); padding:20px;
+    border:1px solid var(--border);
+  }
+  .stat-label { font-size:.8rem; color:var(--text-muted); margin-bottom:6px; }
+  .stat-value { font-size:1.8rem; font-weight:700; }
+  .stat-value.accent { color:var(--accent); }
+  .stat-value.accent3 { color:var(--accent3); }
+
+
+  /* ── Passengers ── */
+  .passengers-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin-bottom:24px; }
+  .passenger-card {
+    background:var(--surface); border-radius:var(--radius); border:1px solid var(--border);
+    overflow:hidden; transition:border-color .2s, transform .2s; position:relative;
+  }
+  .passenger-card:hover { border-color:var(--accent3); transform:translateY(-3px); }
+  .passenger-card-header {
+    background: linear-gradient(135deg, #1a1a35, #0f2340);
+    padding:18px 20px 14px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:14px;
+  }
+  .passenger-avatar {
+    width:46px; height:46px; border-radius:50%;
+    background: linear-gradient(135deg, var(--accent3), #a78bfa);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.1rem; font-weight:700; color:#000; flex-shrink:0;
+  }
+  .passenger-name-en { font-size:1rem; font-weight:700; letter-spacing:.5px; font-family:monospace; }
+  .passenger-name-ko { font-size:.8rem; color:var(--text-muted); margin-top:2px; }
+  .passenger-card-body { padding:16px 20px; display:flex; flex-direction:column; gap:10px; }
+  .passenger-field { display:flex; align-items:center; gap:10px; }
+  .pf-icon { font-size:.95rem; width:20px; text-align:center; flex-shrink:0; }
+  .pf-label { font-size:.72rem; color:var(--text-muted); margin-bottom:1px; }
+  .pf-value { font-size:.88rem; font-weight:500; }
+  .pf-value.mono { font-family:monospace; letter-spacing:1.5px; color:var(--accent3); font-size:.9rem; }
+  .pf-value.passport { font-family:monospace; letter-spacing:2px; color:var(--accent); font-size:.9rem; }
+  .pf-value.no-ffn { color:var(--text-muted); font-style:italic; font-size:.82rem; }
+  .passenger-card-footer { padding:12px 20px; border-top:1px solid var(--border); display:flex; gap:8px; }
+  .pax-count-badge {
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--surface2); border-radius:12px; padding:5px 14px;
+    font-size:.8rem; color:var(--text-muted); margin-bottom:16px;
+  }
+  .pax-count-badge strong { color:var(--accent3); }
+
+
+  /* ── Budget ── */
+  .budget-section { margin-bottom:28px; }
+  .budget-section-title {
+    font-size:.78rem; font-weight:700; color:var(--text-muted);
+    text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .budget-section-title::after {
+    content:''; flex:1; height:1px; background:var(--border);
+  }
+  .budget-table { width:100%; border-collapse:collapse; }
+  .budget-table th {
+    font-size:.72rem; color:var(--text-muted); text-align:left;
+    padding:6px 10px; border-bottom:1px solid var(--border); font-weight:500;
+  }
+  .budget-table th:last-child, .budget-table td:last-child { text-align:right; }
+  .budget-table th:nth-child(3), .budget-table td:nth-child(3) { text-align:right; }
+  .budget-table td {
+    font-size:.83rem; padding:9px 10px; border-bottom:1px solid rgba(255,255,255,0.04);
+    vertical-align:top;
+  }
+  .budget-table tr:hover td { background:rgba(255,255,255,0.02); }
+  .budget-table td:first-child { font-weight:500; white-space:nowrap; }
+  .budget-table td.note { color:var(--text-muted); font-size:.76rem; }
+  .budget-table td.won { color:var(--accent3); font-family:monospace; white-space:nowrap; }
+  .budget-table td.qty { color:var(--text-muted); text-align:right; }
+  .budget-subtotal td {
+    background:var(--surface2); font-weight:700; font-size:.82rem;
+    border-top:1px solid var(--border);
+  }
+  .budget-subtotal td.won { color:var(--accent); }
+  .budget-grand {
+    background: linear-gradient(135deg,var(--surface),var(--surface2));
+    border-radius:var(--radius); padding:20px 24px; margin-top:8px;
+    display:flex; justify-content:space-between; align-items:center;
+    border:1px solid var(--border);
+  }
+  .budget-grand-label { font-size:.9rem; color:var(--text-muted); }
+  .budget-grand-amount { font-size:1.6rem; font-weight:700; color:var(--accent); font-family:monospace; }
+  .budget-grand-krw { font-size:.85rem; color:var(--text-muted); margin-top:2px; text-align:right; }
+  .budget-tag {
+    display:inline-block; font-size:.7rem; padding:2px 7px; border-radius:10px;
+    margin-left:6px; font-weight:600;
+  }
+  .tag-pharmacy { background:rgba(100,223,223,0.15); color:var(--accent3); }
+  .tag-market   { background:rgba(232,197,71,0.15);  color:var(--accent); }
+  .tag-food     { background:rgba(249,115,22,0.15);  color:#f97316; }
+  .tag-massage  { background:rgba(167,139,250,0.15); color:#a78bfa; }
+  .tag-gift     { background:rgba(255,107,107,0.15); color:var(--accent2); }
+  .tag-transport{ background:rgba(34,211,238,0.15);  color:#22d3ee; }
+
+  /* Responsive */
+  @media(max-width:600px){
+    .trips-grid { grid-template-columns:1fr; }
+    .form-row { flex-direction:column; }
+    .tab-btn { padding:6px 10px; font-size:.78rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Trip<span>Guide</span></div>
+  <nav class="tab-nav">
+    <button class="tab-btn active" onclick="showPage('trips')">✈ 여행 목록</button>
+    <button class="tab-btn" onclick="showPage('detail')" id="detail-tab" style="display:none">📋 상세</button>
+  </nav>
+</header>
+
+<div class="app">
+  <!-- ── Page: Trip List ── -->
+  <div class="page active" id="page-trips">
+    <div class="section-header">
+      <div class="section-title">나의 해외 여행 ✈️</div>
+      <button class="btn-primary" onclick="openNewTripModal()">+ 새 여행 추가</button>
+    </div>
+    <div class="trips-grid" id="trips-grid"></div>
+  </div>
+
+  <!-- ── Page: Detail ── -->
+  <div class="page" id="page-detail">
+    <div class="detail-header">
+      <button class="back-btn" onclick="showPage('trips')">←</button>
+      <div>
+        <div class="detail-title" id="detail-title"></div>
+        <div class="detail-subtitle" id="detail-subtitle"></div>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-grid" id="detail-stats"></div>
+
+    <!-- Inner tabs -->
+    <div class="inner-tabs">
+      <button class="inner-tab active" onclick="switchInnerTab('schedule',this)">📅 일정</button>
+      <button class="inner-tab" onclick="switchInnerTab('checklist',this)">☑ 체크리스트</button>
+      <button class="inner-tab" onclick="switchInnerTab('passengers',this)">🛂 탑승자</button>
+      <button class="inner-tab" onclick="switchInnerTab('budget',this)">💰 예산</button>
+    </div>
+
+    <!-- Schedule Panel -->
+    <div id="panel-schedule">
+      <div id="schedule-days"></div>
+    </div>
+
+    <!-- Checklist Panel -->
+    <div id="panel-checklist" style="display:none">
+      <div class="checklist-cats" id="checklist-cats"></div>
+      <div id="checklist-body"></div>
+      <div class="add-check-row">
+        <input class="form-input" id="new-check-input" placeholder="새 항목 입력..." onkeydown="if(event.key==='Enter')addCheckItem()">
+        <button class="btn-add" onclick="addCheckItem()">추가</button>
+      </div>
+    </div>
+
+    <!-- Budget Panel -->
+    <div id="panel-budget" style="display:none">
+      <div id="budget-body"></div>
+    </div>
+
+    <!-- Passengers Panel -->
+    <div id="panel-passengers" style="display:none">
+      <div id="passengers-body"></div>
+      <button class="btn-primary" style="margin-top:4px" onclick="openAddPassengerModal()">+ 탑승자 추가</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Add / Edit Passenger Modal -->
+<div class="modal-overlay" id="modal-passenger">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title" id="pmodal-title">탑승자 정보 추가 🛂</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>영문 성명 (여권 기준)</label>
+        <input class="form-input" id="p-name-en" placeholder="KIM HEEJIN" style="font-family:monospace;text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label>한글 성명</label>
+        <input class="form-input" id="p-name-ko" placeholder="김희진">
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:12px">
+      <div class="form-group">
+        <label>생년월일</label>
+        <input class="form-input" id="p-birth" placeholder="1990.07.30">
+      </div>
+      <div class="form-group">
+        <label>여권 번호</label>
+        <input class="form-input" id="p-passport" placeholder="M878S1645" style="font-family:monospace;letter-spacing:1px;text-transform:uppercase">
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label>항공사 회원번호 (없으면 비워두세요)</label>
+      <input class="form-input" id="p-ffn" placeholder="아시아나 818842454">
+    </div>
+    <input type="hidden" id="p-edit-id">
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closePassengerModal()">취소</button>
+      <button class="btn-primary" onclick="savePassenger()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Event Modal -->
+<div class="modal-overlay" id="modal-edit-event">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">일정 수정 ✏️</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>시간</label>
+        <input class="form-input" type="time" id="ee-time">
+      </div>
+      <div class="form-group">
+        <label>종류</label>
+        <select class="form-select" id="ee-type">
+          <option value="activity">관광</option>
+          <option value="food">식사</option>
+          <option value="transport">교통</option>
+          <option value="hotel">숙소</option>
+          <option value="other">기타</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label>일정 이름</label>
+      <input class="form-input" id="ee-name" placeholder="일정 이름">
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label>메모 <span style="font-size:.75rem;color:var(--text-muted)">( · 로 항목 구분)</span></label>
+      <textarea class="form-input" id="ee-note" rows="4" placeholder="예: 예약번호 123 · 무료 · 현금 필요" style="resize:vertical;line-height:1.6"></textarea>
+    </div>
+    <input type="hidden" id="ee-day">
+    <input type="hidden" id="ee-id">
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeEditEventModal()">취소</button>
+      <button class="btn-primary" onclick="saveEditEvent()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Trip Modal -->
+<div class="modal-overlay" id="modal-trip">
+  <div class="modal">
+    <div class="modal-title">새 여행 만들기 🌏</div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>여행 이름</label>
+      <input class="form-input" id="m-name" placeholder="예: 도쿄 봄 여행">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>출발일</label>
+        <input class="form-input" id="m-start" type="date">
+      </div>
+      <div class="form-group">
+        <label>귀국일</label>
+        <input class="form-input" id="m-end" type="date">
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:14px">
+      <label>목적지 이모지</label>
+      <input class="form-input" id="m-emoji" placeholder="🗼 🌸 🏖 🗽 ...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-primary" onclick="createTrip()">만들기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let trips = JSON.parse(localStorage.getItem('tg_trips')||'[]');
+let currentTripId = null;
+let currentCheckCat = '전체';
+
+const DEFAULT_CHECKLIST = {
+  '서류·결제': [
+    '여권·여권사본·사진·신분증 (핸드폰에도 저장)',
+    '비행기 e-티켓 (핸드폰에도 저장)',
+    '여행자보험',
+    '환전·해외사용 카드·체크카드',
+    '국문/영문 가족관계서 (아이 동행 시)',
+    '영문 호텔 예약확인서',
+    '공항 픽업차량 신청',
+    '패스트트랙 신청',
+    '공항 라운지 카드·트래블카드',
+  ],
+  '짐·전자기기': [
+    '충전기·보조배터리 (100Wh 이하 기내 5개 반입)',
+    '돼지코 (여러 개) + 멀티탭',
+    '손선풍기',
+    '핸드폰 충전기',
+    '압축팩',
+    '지퍼백·큰 비닐봉투 (젖은빨래용)',
+    '빨래줄·집게',
+    '접이식 포트',
+    '샤워기 필터',
+    '가벼운 양산',
+    '물티슈·손수건',
+    '볼펜',
+    '휴대용 손소독제',
+  ],
+  '의류·세면': [
+    '반팔·상하의 여벌옷',
+    '햇빛 가리개 모자',
+    '속옷',
+    '잠옷 (긴팔)',
+    '바람막이 (공항용·에어컨용)',
+    '샌들·양말',
+    '선글라스',
+    '휴대용 가방',
+    '머리끈',
+    '칫솔·치약',
+    '바디워시·샴푸·린스 (일회용)',
+    '샤워타올·세탁용품',
+    '스킨/로션·화장품·클렌징 용품',
+    '선크림',
+    '수딩젤·알로에젤',
+    '마스크팩·머리빗',
+    '안경·렌즈',
+    '기내용 목베개',
+    '웰킷 가습마스크 (기내용)',
+  ],
+  '물놀이': [
+    '방수 핸드폰 케이스',
+    '방수 가방',
+    '비치 타올',
+    '암튜브·튜브',
+    '아쿠아슈즈',
+    '래시가드·수영모자·햇빛가리개 모자',
+  ],
+  '상비약·음식': [
+    '소화제',
+    '배탈약·지사제',
+    '감기약',
+    '화상연고',
+    '피부연고',
+    '체온계·열패치',
+    '안연고·안약',
+    '물약병',
+    '햇반 5개',
+    '생수 500ml 3병 (위탁 최대 4병)',
+    '나무젓가락·일회용 숟가락·접시',
+  ],
+  '아기용품': [
+    '기내용 아기 마스크',
+    '얇은 블랭킷·베개',
+    '기저귀 7개 (기내 2개 + 여분 5개)',
+    '아기 여벌옷·긴팔 잠옷·얇은 가디건',
+    '아기 래시가드·아쿠아슈즈',
+    '귀방수 스티커·방수기저귀',
+    '아기 선크림',
+    '구명조끼',
+    '아기바디워시·아기로션',
+    '아기 식기도구·수저·빨대·턱받이',
+    '일회용봉투 (배변용)',
+    '칼슘젤리·유산균',
+    '레스큐액·배도라지즙 100ml 5개',
+    '모기퇴치제·리도맥스·비판텐',
+    '아기 감기약·백초시럽·코감기시럽',
+    '해열제·타이레놀·해열시트',
+    '화상연고·마이키파·뽀로로밴드',
+    '체온계·비상구급파우치',
+    '보리차 3개·주스 2개·물 2개',
+    '흰밥·김 5개·김자반 3개·덮밥소스 2개·고구마간식',
+    '스티커북 2권·그림그리기 보드·책 3권·자동차 2개',
+    '간식 (비타민캔디·야미얼스사탕·과자)',
+    '유모차',
+    '전기포트·텀블러',
+  ],
+  '현지 ATM·환전': [
+    '트래블쏠카드 충전 완료',
+    '인출 전 필수 체크: VPBank·신한베트남은행 ATM → 현지 수수료 면제',
+    '한시장 근처 ATM → VPBank (Phan Chau Trinh 거리)',
+    '용다리·시내 중심 ATM → 신한은행 (Nguyễn Văn Linh 거리)',
+    '구글에서 VP bank 찾기 → 트래블월렛이 vpbank 인출 수수료 무료',
+    'VP bank 인출 방법: 카드넣기 → 영어선택 → 비빈6자리(설정비빈+00)',
+    '인출 금액 설정: withdrawal 인출 → current account → 원하는 금액 200만동 → 두번하던 1번하던 적당히 → 영수증 no',
+    '이중 환전 방지: 인출 시 "Without Conversion(본인 카드 환율 적용)" 반드시 선택',
+    '참고 블로그: https://m.blog.naver.com/ypongu0/224236053930',
+    '─────── 날짜별 환전 계획 ───────',
+    '1일차 (5/15) — 환전 없음 · 카드+기존 현금으로만 사용 (팁 2달러만 준비)',
+    '2일차 (5/16) — 시내 ATM 2회 → 200만동×2 = 약 22만원 (한시장·마사지·과일 현금)',
+    '3일차 (5/17) — 시내 ATM 2회 → 200만동×2 = 약 22만원 (네일·호이안 현금)',
+    '4일차 (5/18) — 시내 ATM 1회 → 178만동 = 약 12만원 (빈원더스·안방비치 현금)',
+    '5일차 (5/19) — 시내 ATM 1회 → 약 10만원 (마지막날 비상·팁용)',
+    '─────── 합계 ───────',
+    '총 현금 환전 계획: 약 66만원 (22+22+12+10)',
+    '💡 2일차가 현금 가장 많이 필요 — 한시장 쇼핑 20만원 + 마사지 4만원',
+    '💡 ATM 위치: 한시장 근처 VPBank (Phan Chau Trinh 거리)',
+  ],
+  '결제 계획 (현금·카드)': [
+    '══ 💵 현금 결제 항목 ══',
+    '1일차 — 공항 주차·발렛비 ₩65,000 (카드결제 가능 확인)',
+    '1일차 — 팁 2달러만 현금 준비 (약 ₩3,000) · 환전 없음',
+    '1일차 — 패스트트랙 ₩87,000',
+    '1일차 — 호텔 픽업 팁 (2달러) ₩3,000',
+    '2일차 — 온다마사지샵 90분 (희진) ₩40,000',
+    '2일차 — 한시장 쇼핑 ₩200,000',
+    '2일차 — 카페 (킬디앤모어·콩카페) ₩10,000',
+    '2일차 — 미케비치 그랩 ₩14,000',
+    '3일차 — 핑크스파 네일 (젤 페디+핸드) ₩47,393',
+    '3일차 — 소원배 탑승 ₩9,008',
+    '3일차 — 저녁 호이안 야시장 ₩30,000',
+    '4일차 — 자전거·마트 빨래 ₩4,496',
+    '4일차 — 빈원더스 리버사파리 ₩50,000',
+    '4일차 — 카피바라 먹이체험 ₩6,000',
+    '4일차 — 안방비치 라풀라주 점심 ₩6,000',
+    '4일차 — 저녁 반쎄오 맛집 ₩15,000',
+    '5일차 — 점심 ₩30,000',
+    '기타 — 비상·팁용 ₩50,000',
+    '💵 현금 소계: 약 ₩642,000 (1일차 공항 환전 없음)',
+    '══ 💳 카드 결제 항목 ══',
+    '출국전 — 여행자보험 3인 ₩34,200',
+    '출국전 — 로밍 유심 ₩12,300',
+    '출국전 — 다낭 패스트트랙 ₩95,000',
+    '1일차 — 브릴리언트 호텔 2박 ₩311,584',
+    '2일차 — 점심 식사 ₩30,000',
+    '2일차 — 한시장 마사지 로하스파 ₩38,000',
+    '3일차 — 그랩 호이안 이동 ₩19,985',
+    '3일차 — 점심 식사 ₩30,000',
+    '3일차 — 마사지 아라·온다 ₩78,000',
+    '4일차 — 빈원더스 입장권 ₩75,000',
+    '4일차 — 버기카투어 or 바구니배 ₩17,000',
+    '4일차 — 마사지 수남·로얄스파 ₩60,000',
+    '4일차 — 실크센스 마사지 (밤) ₩50,000',
+    '5일차 — 실크센스 레이트체크아웃 패키지 ₩168,300',
+    '5일차 — 체크아웃 정산 ₩50,000',
+    '5일차 — 저녁 리조트 ₩15,000',
+    '전체 — 커피·간식 4일치 ₩80,000',
+    '전체 — 그랩 교통비 ₩25,000',
+    '현지 — 약국 쇼핑 ₩39,540',
+    '💳 카드 소계: 약 ₩1,199,000',
+    '══ 합계 ══',
+    '💵 현금 총액: 약 ₩642,000 → 환전 목표 약 66만원 (2일차부터 시내 ATM)',
+    '💳 카드 총액: 약 ₩1,199,000',
+    '🧾 전체 예상 지출: 약 ₩1,866,000',
+  ],
+  '출발 전 최종 확인': [
+    '동지갑 챙기기',
+    '환전 완료',
+    '유심/이심/로밍 확인',
+    '빈원더스 체크·호텔예약 체크',
+    '타포린백',
+    '보조배터리 휴대용 가방에 넣기',
+    '그랩 앱 설치',
+    '구글지도 오프라인 저장',
+    '브릴리언트 호텔 픽업 확인 — 예약번호 1710430533 · 항공편 OZ755 · 픽업 시간 오후 9시 45분 · 교통비 무료',
+    '운전기사 "김희진 님 환영합니다" 팻말 · 다낭 공항 도착홀 앞 대기',
+    '수량 한정 2세 미만 무료 침대 가드 요청 — customercare@brillianthotel.vn 으로 booking ID·예약자명·항공편 세부정보 발송',
+    '고층 객실 요청 시 동일 이메일로 문의',
+  ],
+};
+
+// ── Save ──
+function save() { localStorage.setItem('tg_trips', JSON.stringify(trips)); }
+
+// ── Pages ──
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if(name==='trips'){
+    document.querySelector('.tab-btn').classList.add('active');
+    document.getElementById('detail-tab').style.display='none';
+    renderTrips();
+  } else {
+    document.getElementById('detail-tab').style.display='';
+    document.getElementById('detail-tab').classList.add('active');
+    renderDetail();
+  }
+}
+
+// ── Trips ──
+function renderTrips(){
+  const grid = document.getElementById('trips-grid');
+  if(!trips.length){
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="icon">🌍</div><p>아직 여행이 없어요.<br>첫 번째 해외 여행을 추가해보세요!</p></div>`;
+    return;
+  }
+  grid.innerHTML = trips.map(t=>{
+    const total = Object.values(t.checklist||{}).flat().length;
+    const done = Object.values(t.checklist||{}).flat().filter(i=>i.done).length;
+    const pct = total ? Math.round(done/total*100) : 0;
+    const nights = t.start && t.end ? Math.max(0,Math.round((new Date(t.end)-new Date(t.start))/86400000)) : '?';
+    return `<div class="trip-card" onclick="openTrip('${t.id}')">
+      <div class="trip-emoji">${t.emoji||'✈️'}</div>
+      <div class="trip-name">${t.name}</div>
+      <div class="trip-dates">${t.start||'?'} ~ ${t.end||'?'} (${nights}박)</div>
+      <div class="trip-progress-bar"><div class="trip-progress-fill" style="width:${pct}%"></div></div>
+      <div class="trip-progress-label">체크리스트 ${done}/${total} (${pct}%)</div>
+      <div class="trip-actions">
+        <button class="btn-sm" onclick="event.stopPropagation();openTrip('${t.id}')">열기</button>
+        <button class="btn-sm btn-danger" onclick="event.stopPropagation();deleteTrip('${t.id}')">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openNewTripModal(){
+  document.getElementById('modal-trip').classList.add('open');
+  document.getElementById('m-name').focus();
+}
+function closeModal(){ document.getElementById('modal-trip').classList.remove('open'); }
+function createTrip(){
+  const name = document.getElementById('m-name').value.trim();
+  if(!name){ alert('여행 이름을 입력해주세요.'); return; }
+  const trip = {
+    id: Date.now()+'',
+    name,
+    emoji: document.getElementById('m-emoji').value.trim()||'✈️',
+    start: document.getElementById('m-start').value,
+    end: document.getElementById('m-end').value,
+    schedule: {},  // { 'YYYY-MM-DD': [{id,time,type,name,note}] }
+    checklist: JSON.parse(JSON.stringify(DEFAULT_CHECKLIST).replace(/("name":)/g,'"text":')
+      // rebuild default
+    ),
+  };
+  // rebuild checklist properly
+  trip.checklist = {};
+  for(const [cat, items] of Object.entries(DEFAULT_CHECKLIST)){
+    trip.checklist[cat] = items.map(i=>({id:Math.random().toString(36).slice(2),text:i,done:false}));
+  }
+  trips.push(trip); save(); closeModal();
+  ['m-name','m-emoji','m-start','m-end'].forEach(id=>document.getElementById(id).value='');
+  renderTrips();
+}
+function deleteTrip(id){
+  if(!confirm('이 여행을 삭제할까요?')) return;
+  trips = trips.filter(t=>t.id!==id); save(); renderTrips();
+}
+function openTrip(id){
+  currentTripId = id;
+  showPage('detail');
+}
+
+// ── Detail ──
+function getTrip(){ return trips.find(t=>t.id===currentTripId); }
+function renderDetail(){
+  const t = getTrip(); if(!t) return;
+  document.getElementById('detail-title').textContent = t.emoji+' '+t.name;
+  const nights = t.start&&t.end ? Math.max(0,Math.round((new Date(t.end)-new Date(t.start))/86400000)):0;
+  document.getElementById('detail-subtitle').textContent = (t.start||'?')+' ~ '+(t.end||'?')+' · '+(nights+'박'+(nights+1)+'일');
+
+  // Stats
+  const total = Object.values(t.checklist||{}).flat().length;
+  const done = Object.values(t.checklist||{}).flat().filter(i=>i.done).length;
+  const events = Object.values(t.schedule||{}).flat().length;
+  const days = Object.keys(t.schedule||{}).length;
+  document.getElementById('detail-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">여행 일수</div><div class="stat-value accent">${nights+1}<span style="font-size:1rem;font-weight:400">일</span></div></div>
+    <div class="stat-card"><div class="stat-label">일정 등록</div><div class="stat-value accent3">${events}<span style="font-size:1rem;font-weight:400">개</span></div></div>
+    <div class="stat-card"><div class="stat-label">체크 완료</div><div class="stat-value" style="color:#a78bfa">${done}<span style="font-size:1rem;font-weight:400">/${total}</span></div></div>
+  `;
+  renderSchedule();
+  renderChecklist();
+}
+
+// ── Schedule ──
+function renderSchedule(){
+  const t = getTrip(); if(!t) return;
+  const container = document.getElementById('schedule-days');
+  const days = buildDays(t);
+  if(!days.length){
+    container.innerHTML='<div class="empty-state"><div class="icon">📅</div><p>출발일·귀국일을 설정하면<br>날짜별 일정이 나타납니다.</p></div>';
+    return;
+  }
+  const typeLabel = {transport:'교통',food:'식사',hotel:'숙소',activity:'관광',other:'기타'};
+  const dow = ['일','월','화','수','목','금','토'];
+  const activeDay = window._schedActiveDay || days[0];
+
+  // Day tab bar
+  let tabHtml = '<div class="day-tab-bar">';
+  days.forEach((d,i)=>{
+    const dateObj = new Date(d);
+    const evCount = (t.schedule[d]||[]).length;
+    const isActive = d === activeDay;
+    tabHtml += '<button class="day-tab'+(isActive?' active':'')+'" onclick="setScheduleDay(\''+d+'\')">'+
+      '<span class="day-tab-num">Day '+(i+1)+'</span>'+
+      '<span class="day-tab-date">'+dow[dateObj.getDay()]+'</span>'+
+      (evCount ? '<span class="day-tab-count">'+evCount+'</span>' : '')+
+      '</button>';
+  });
+  tabHtml += '</div>';
+
+  // Active day content
+  const d = activeDay;
+  const dateObj = new Date(d);
+  const events = (t.schedule[d]||[]).sort((a,b)=>a.time.localeCompare(b.time));
+
+  let dayHtml = '<div class="day-block">'
+    + '<div class="day-header">'
+    + '<span class="day-badge">'+d+'</span>'
+    + '<span class="day-weekday">'+dow[dateObj.getDay()]+'요일</span>'
+    + '<button class="btn-add" style="margin:0;padding:4px 12px;font-size:.75rem;margin-left:auto" onclick="showAddEvent(\''+d+'\')">+ 일정 추가</button>'
+    + '</div>'
+    + '<div class="timeline">'
+    + (events.length ? events.map(ev=>{
+        const noteChips = ev.note ? ev.note.split('·').map(c=>c.trim()).filter(Boolean) : [];
+        const hasNote = noteChips.length > 0;
+        return '<div class="tl-item">'
+          + '<div class="tl-dot '+ev.type+'"></div>'
+          + '<div class="tl-card'+(ev.done?' done':'')+'">'
+          + '<div class="tl-card-head">'
+          + '<span class="tl-time">'+(ev.time||'--:--')+'</span>'
+          + '<span class="tl-type-badge '+ev.type+'">'+typeLabel[ev.type||'other']+'</span>'
+          + '<span class="tl-name">'+ev.name+'</span>'
+          + '<button class="tl-edit-btn" onclick="openEditEvent(\''+d+'\',\''+ev.id+'\')">수정</button>'
+          + '<button class="tl-delete-btn" onclick="deleteEvent(\''+d+'\',\''+ev.id+'\')">✕</button>'
+          + '</div>'
+          + (hasNote
+              ? '<div class="tl-note-body">'
+                + noteChips.map(c=>{
+                    const isHighlight = c.startsWith('✅') || c.includes('무료') || c.includes('예약') || c.includes('완료');
+                    return '<div class="tl-note-line'+(isHighlight?' hl':'')+'"><span class="tl-note-dot"></span>'+c+'</div>';
+                  }).join('')
+                + '</div>'
+              : '')
+          + '</div></div>';
+      }).join('')
+      : '<div style="padding:32px 0;color:var(--text-muted);font-size:.85rem;text-align:center">이 날 일정이 없어요</div>')
+    + '</div>'
+
+    + '<div class="add-event-form" id="add-form-'+d+'" style="display:none;margin-top:12px">'
+    + '<div class="form-row">'
+    + '<div class="form-group"><label>시간</label><input class="form-input" type="time" id="ef-time-'+d+'" value="09:00"></div>'
+    + '<div class="form-group"><label>종류</label>'
+    + '<select class="form-select" id="ef-type-'+d+'">'
+    + '<option value="activity">관광</option><option value="food">식사</option>'
+    + '<option value="transport">교통</option><option value="hotel">숙소</option><option value="other">기타</option>'
+    + '</select></div></div>'
+    + '<div class="form-row" style="margin-top:8px">'
+    + '<div class="form-group"><label>일정 이름 *</label><input class="form-input" id="ef-name-'+d+'" placeholder="예: 한시장 마사지"></div>'
+    + '<div class="form-group"><label>메모 (· 로 구분)</label><input class="form-input" id="ef-note-'+d+'" placeholder="예: 예약번호 123 · 무료"></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:8px">'
+    + '<button class="btn-add" onclick="addEvent(\''+d+'\')">저장</button>'
+    + '<button class="btn-cancel" style="padding:8px 14px;border-radius:8px;cursor:pointer" onclick="document.getElementById(\'add-form-'+d+'\').style.display=\'none\'">취소</button>'
+    + '</div></div>'
+    + '</div>';
+
+  container.innerHTML = tabHtml + dayHtml;
+}
+
+function setScheduleDay(d){
+  window._schedActiveDay = d;
+  renderSchedule();
+}
+
+function buildDays(t){
+  if(!t.start||!t.end) return [];
+  const days=[]; let cur=new Date(t.start);
+  const end=new Date(t.end);
+  while(cur<=end){ days.push(cur.toISOString().slice(0,10)); cur.setDate(cur.getDate()+1); }
+  return days;
+}
+function showAddEvent(d){ document.getElementById('add-form-'+d).style.display='block'; }
+function addEvent(d){
+  const t=getTrip();
+  const name=document.getElementById('ef-name-'+d).value.trim();
+  if(!name){alert('일정 이름을 입력해주세요.');return;}
+  if(!t.schedule[d]) t.schedule[d]=[];
+  t.schedule[d].push({
+    id:Math.random().toString(36).slice(2),
+    time:document.getElementById('ef-time-'+d).value,
+    type:document.getElementById('ef-type-'+d).value,
+    name,
+    note:document.getElementById('ef-note-'+d).value.trim(),
+  });
+  save(); renderSchedule();
+}
+function deleteEvent(d,id){
+  const t=getTrip();
+  t.schedule[d]=(t.schedule[d]||[]).filter(e=>e.id!==id);
+  save(); renderSchedule();
+}
+function toggleEventDone(d,id){
+  const t=getTrip();
+  const ev=(t.schedule[d]||[]).find(e=>e.id===id);
+  if(ev) ev.done=!ev.done;
+  save(); renderSchedule();
+}
+function openEditEvent(d, id){
+  const t = getTrip();
+  const ev = (t.schedule[d]||[]).find(e=>e.id===id);
+  if(!ev) return;
+  document.getElementById('ee-day').value = d;
+  document.getElementById('ee-id').value = id;
+  document.getElementById('ee-time').value = ev.time||'';
+  document.getElementById('ee-type').value = ev.type||'activity';
+  document.getElementById('ee-name').value = ev.name||'';
+  document.getElementById('ee-note').value = (ev.note||'').split('·').map(s=>s.trim()).join('\n· ');
+  document.getElementById('modal-edit-event').classList.add('open');
+}
+function closeEditEventModal(){
+  document.getElementById('modal-edit-event').classList.remove('open');
+}
+function saveEditEvent(){
+  const t = getTrip();
+  const d = document.getElementById('ee-day').value;
+  const id = document.getElementById('ee-id').value;
+  const ev = (t.schedule[d]||[]).find(e=>e.id===id);
+  if(!ev) return;
+  ev.time = document.getElementById('ee-time').value;
+  ev.type = document.getElementById('ee-type').value;
+  ev.name = document.getElementById('ee-name').value.trim();
+  // note: join lines with ·
+  ev.note = document.getElementById('ee-note').value.split('\n').map(function(s){ return s.replace(/^[· ]+/,'').trim(); }).filter(Boolean).join(' · ');
+  save();
+  closeEditEventModal();
+  renderSchedule();
+}
+function toggleCollapse(id){
+  if(!window._expandedEvents) window._expandedEvents = {};
+  window._expandedEvents[id] = !window._expandedEvents[id];
+  renderSchedule();
+}
+
+// ── Checklist ──
+function renderChecklist(){
+  const t=getTrip(); if(!t) return;
+  const cats=['전체',...Object.keys(t.checklist)];
+  document.getElementById('checklist-cats').innerHTML=cats.map(c=>
+    `<span class="cat-chip${c===currentCheckCat?' active':''}" onclick="setCheckCat('${c}')">${c}</span>`
+  ).join('');
+  const body=document.getElementById('checklist-body');
+  const showCats = currentCheckCat==='전체' ? Object.keys(t.checklist) : [currentCheckCat];
+  body.innerHTML=showCats.map(cat=>{
+    const items=t.checklist[cat]||[];
+    return `<div class="checklist-section">
+      <div class="checklist-section-title">${cat}</div>
+      ${items.map(item=>`
+        <div class="check-item${item.done?' done':''}">
+          <div class="custom-check${item.done?' checked':''}" onclick="toggleCheck('${cat}','${item.id}')">
+            ${item.done?'<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#000" stroke-width="2" fill="none"/></svg>':''}
+          </div>
+          <span class="check-label">${item.text}</span>
+          <button class="check-delete" onclick="deleteCheck('${cat}','${item.id}')">✕</button>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+function setCheckCat(c){ currentCheckCat=c; renderChecklist(); }
+function toggleCheck(cat,id){
+  const t=getTrip();
+  const item=t.checklist[cat].find(i=>i.id===id);
+  if(item) item.done=!item.done;
+  save(); renderChecklist(); renderDetail();  // update stats
+}
+function deleteCheck(cat,id){
+  const t=getTrip();
+  t.checklist[cat]=t.checklist[cat].filter(i=>i.id!==id);
+  save(); renderChecklist();
+}
+function addCheckItem(){
+  const t=getTrip();
+  const input=document.getElementById('new-check-input');
+  const text=input.value.trim(); if(!text) return;
+  const cat=currentCheckCat==='전체'?Object.keys(t.checklist)[0]:currentCheckCat;
+  if(!t.checklist[cat]) t.checklist[cat]=[];
+  t.checklist[cat].push({id:Math.random().toString(36).slice(2),text,done:false});
+  input.value=''; save(); renderChecklist();
+}
+
+// ── Inner tabs ──
+function switchInnerTab(tab, btn){
+  document.querySelectorAll('.inner-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-schedule').style.display = tab==='schedule'?'block':'none';
+  document.getElementById('panel-checklist').style.display = tab==='checklist'?'block':'none';
+  document.getElementById('panel-passengers').style.display = tab==='passengers'?'block':'none';
+  document.getElementById('panel-budget').style.display = tab==='budget'?'block':'none';
+  if(tab==='passengers') renderPassengers();
+  if(tab==='budget') renderBudget();
+}
+
+
+// ── Passengers ──
+const DEFAULT_PASSENGERS = [
+  { id:'p1', nameEn:'KIM HEEJIN',  nameKo:'김희진', birth:'1990.07.30', passport:'M878S1645', ffn:'아시아나 항공 818842454' },
+  { id:'p2', nameEn:'LEE SUNGMIN', nameKo:'이성민', birth:'1986.03.26', passport:'M37244299',  ffn:'' },
+  { id:'p3', nameEn:'LEE YUJUN',   nameKo:'이유준', birth:'2022.12.03', passport:'M283H8836',  ffn:'' },
+];
+
+function initPassengers(trip){
+  if(!trip.passengers) trip.passengers = JSON.parse(JSON.stringify(DEFAULT_PASSENGERS));
+}
+function renderPassengers(){
+  const t=getTrip(); if(!t) return;
+  initPassengers(t);
+  const body=document.getElementById('passengers-body');
+  const pax=t.passengers;
+  body.innerHTML=`
+    <div class="pax-count-badge">👥 탑승자 <strong>${pax.length}명</strong></div>
+    <div class="passengers-grid">
+      ${pax.map(p=>{
+        const initials = p.nameKo ? p.nameKo.slice(0,1) : p.nameEn.slice(0,1);
+        return `<div class="passenger-card">
+          <div class="passenger-card-header">
+            <div class="passenger-avatar">${initials}</div>
+            <div>
+              <div class="passenger-name-en">${p.nameEn}</div>
+              <div class="passenger-name-ko">${p.nameKo||''}</div>
+            </div>
+          </div>
+          <div class="passenger-card-body">
+            <div class="passenger-field">
+              <div class="pf-icon">🎂</div>
+              <div><div class="pf-label">생년월일</div><div class="pf-value">${p.birth||'—'}</div></div>
+            </div>
+            <div class="passenger-field">
+              <div class="pf-icon">🛂</div>
+              <div><div class="pf-label">여권 번호</div><div class="pf-value passport">${p.passport||'—'}</div></div>
+            </div>
+            <div class="passenger-field">
+              <div class="pf-icon">✈️</div>
+              <div><div class="pf-label">항공사 회원번호</div>
+                <div class="pf-value ${p.ffn?'mono':'no-ffn'}">${p.ffn||'회원번호 없음'}</div>
+              </div>
+            </div>
+          </div>
+          <div class="passenger-card-footer">
+            <button class="btn-sm" onclick="editPassenger('${p.id}')">✏️ 수정</button>
+            <button class="btn-sm btn-danger" onclick="deletePassenger('${p.id}')">삭제</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+function openAddPassengerModal(){
+  document.getElementById('pmodal-title').textContent='탑승자 정보 추가 🛂';
+  ['p-name-en','p-name-ko','p-birth','p-passport','p-ffn','p-edit-id'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('modal-passenger').classList.add('open');
+}
+function editPassenger(id){
+  const t=getTrip(); initPassengers(t);
+  const p=t.passengers.find(x=>x.id===id); if(!p) return;
+  document.getElementById('pmodal-title').textContent='탑승자 정보 수정 ✏️';
+  document.getElementById('p-name-en').value=p.nameEn||'';
+  document.getElementById('p-name-ko').value=p.nameKo||'';
+  document.getElementById('p-birth').value=p.birth||'';
+  document.getElementById('p-passport').value=p.passport||'';
+  document.getElementById('p-ffn').value=p.ffn||'';
+  document.getElementById('p-edit-id').value=id;
+  document.getElementById('modal-passenger').classList.add('open');
+}
+function closePassengerModal(){ document.getElementById('modal-passenger').classList.remove('open'); }
+function savePassenger(){
+  const t=getTrip(); initPassengers(t);
+  const nameEn=document.getElementById('p-name-en').value.trim().toUpperCase();
+  if(!nameEn){alert('영문 성명을 입력해주세요.');return;}
+  const editId=document.getElementById('p-edit-id').value;
+  const data={
+    nameEn, nameKo:document.getElementById('p-name-ko').value.trim(),
+    birth:document.getElementById('p-birth').value.trim(),
+    passport:document.getElementById('p-passport').value.trim().toUpperCase(),
+    ffn:document.getElementById('p-ffn').value.trim(),
+  };
+  if(editId){
+    const idx=t.passengers.findIndex(p=>p.id===editId);
+    if(idx>=0) t.passengers[idx]={...t.passengers[idx],...data};
+  } else {
+    t.passengers.push({id:'p'+Date.now(),...data});
+  }
+  save(); closePassengerModal(); renderPassengers();
+}
+function deletePassenger(id){
+  const t=getTrip(); initPassengers(t);
+  if(!confirm('탑승자 정보를 삭제할까요?')) return;
+  t.passengers=t.passengers.filter(p=>p.id!==id);
+  save(); renderPassengers();
+}
+
+
+// ── Budget ──
+const BUDGET_DATA = [
+  {
+    cat:'약국 쇼핑리스트', tag:'tag-pharmacy', icon:'💊',
+    items:[
+      {name:'스트렙실 맥스프로',   note:'Strepsils 100정 / 인후염 치료제 목아플때', qty:2, uvnd:170000, ukrw:9690},
+      {name:'프론스판',            note:'prospan / 기침시럽',                         qty:2, uvnd:82000,  ukrw:4674},
+      {name:'비판탠 밤',           note:'피부 보습 및 상처 치유 연고',                qty:1, uvnd:62000,  ukrw:3403},
+      {name:'비판탠 잇치릴리프',   note:'가려움증 아토피 연고',                       qty:1, uvnd:135000, ukrw:7409},
+    ],
+    note:'약 5만원'
+  },
+  {
+    cat:'한시장 쇼핑리스트 (저녁 7시까지)', tag:'tag-market', icon:'🛍',
+    items:[
+      {name:'콜게이트 하트치약', note:'시세 1개 4만동(원가격), 3개 20만동 2개사기 · 한시장 근처 약국 쌈', qty:2, uvnd:400000, ukrw:11520},
+      {name:'크록스',            note:'15만동~25만동, 유준·아빠 257,258,259',         qty:2, uvnd:20000,  ukrw:8640},
+      {name:'지비츠',            note:'8~10만동',                                      qty:1, uvnd:80000,  ukrw:4608},
+      {name:'단추브라',          note:'165번 단추브라 sister hood 추천 10만동',        qty:4, uvnd:100000, ukrw:5760},
+      {name:'질러팬티',          note:'162번 짐 사이즈체크 3만동, 짭주의, 갯수달세기',qty:10, uvnd:30000,  ukrw:1728},
+      {name:'방도 스카프',       note:'153번 실크 스카프 4만동 정찰제',               qty:1, uvnd:40000,  ukrw:2304},
+      {name:'진주 목걸이',       note:'30~40만동',                                     qty:1, uvnd:300000, ukrw:17280},
+      {name:'악세사리',          note:'미우미우 참제',                                 qty:1, uvnd:40000,  ukrw:2304},
+      {name:'코끼리바지',        note:'5만동',                                         qty:1, uvnd:50000,  ukrw:2880},
+    ],
+    note:'약 11만원'
+  },
+  {
+    cat:'커피 및 간식, 식사', tag:'tag-food', icon:'🍽',
+    items:[
+      {name:'커피 및 간식', note:'평균 2만원 × 4일(3인)', qty:4, uvnd:340000,   ukrw:20000},
+      {name:'과일가게',     note:'키로당 4~5만동, 애플망고, 망고', qty:2, uvnd:100000, ukrw:5760},
+      {name:'식사 4일',    note:'평균 1일에 3만원 / 2끼 6만원',  qty:4, uvnd:1040000, ukrw:60000},
+      {name:'야식',         note:'2번 정도 2만원',                 qty:2, uvnd:340000,  ukrw:20000},
+    ],
+    note:'약 40만원'
+  },
+  {
+    cat:'마사지', tag:'tag-massage', icon:'💆',
+    items:[
+      {name:'다낭 · 한시장 마사지 16일', note:'로하스파 - 한시장 근처 · 프라이빗룸, 족욕, 오일 핫스톤 120분 코스2시간 · 다낭도깨비 제휴, 근처 콩카페', qty:1, uvnd:663000, ukrw:38000},
+      {name:'다낭 · 한시장 마사지 17일', note:'아라 스파 - 무난 깔끔 90분 / 팁 3천원 3분',                                                                qty:1, uvnd:663000, ukrw:38000},
+      {name:'다낭 · 한시장 마사지 17일', note:'온다스파 60분 3만원 / 90분 4만원',                                                                           qty:1, uvnd:690000, ukrw:40000},
+      {name:'다낭 · 호이안 3일차 18일',  note:'호이안 수남 네일 / 스파 미리 예약 / 90분 2만원',                                                             qty:1, uvnd:340000, ukrw:20000},
+      {name:'다낭 · 호이안 4일차 19일',  note:'실크센스 - 근처 로얄스파 / 네일도 가능 걸어서 3분 90분 페디 3만원, 손발 기본 3만원',                        qty:1, uvnd:690000, ukrw:40000},
+    ],
+    note:'20만원'
+  },
+  {
+    cat:'선물 및 기타 구입', tag:'tag-gift', icon:'🎁',
+    items:[
+      {name:'볶음 쌀국수',    note:'아무곳에서', qty:4, uvnd:280000, ukrw:15341},
+      {name:'골든팜 과일청',  note:'아무곳',     qty:4, uvnd:0,      ukrw:0},
+      {name:'망고젤리',       note:'체리슈',     qty:2, uvnd:250000, ukrw:14400},
+    ],
+    note:''
+  },
+  {
+    cat:'교통비', tag:'tag-transport', icon:'🚗',
+    items:[
+      {name:'다낭 → 호이안 그랩, 왕복시 5만원', note:'', qty:1, uvnd:4330000, ukrw:25000},
+    ],
+    note:''
+  },
+];
+
+
+function renderBudget(){
+  const body = document.getElementById('budget-body');
+  let grandVnd = 0, grandKrw = 0;
+  BUDGET_DATA.forEach(s=>{
+    s.items.forEach(it=>{ grandVnd += it.qty*it.uvnd; grandKrw += it.qty*it.ukrw; });
+  });
+
+  let html = '';
+
+  // 상단 총합
+  html += '<div class="budget-grand" style="margin-bottom:24px">'
+        + '<div><div class="budget-grand-label">💳 총 예상 지출</div>'
+        + '<div class="budget-grand-krw">'+grandVnd.toLocaleString()+' VND</div></div>'
+        + '<div style="text-align:right"><div class="budget-grand-amount">₩'+grandKrw.toLocaleString()+'</div></div>'
+        + '</div>';
+
+  // 카테고리별 테이블
+  BUDGET_DATA.forEach(function(sec){
+    const secKrw = sec.items.reduce(function(a,it){ return a + it.qty*it.ukrw; }, 0);
+    html += '<div class="budget-section">'
+          + '<div class="budget-section-title">'+sec.icon+' '+sec.cat
+          + ' <span class="budget-tag '+sec.tag+'">'+sec.tag.replace('tag-','')+'</span></div>'
+          + '<table class="budget-table">'
+          + '<thead><tr><th>항목</th><th>설명</th><th>수량</th><th>단가(₩)</th><th>합계(₩)</th></tr></thead>'
+          + '<tbody>';
+    sec.items.forEach(function(it){
+      html += '<tr>'
+            + '<td>'+it.name+'</td>'
+            + '<td class="note">'+(it.note||'—')+'</td>'
+            + '<td class="qty">'+it.qty+'</td>'
+            + '<td class="won">'+(it.ukrw ? '₩'+it.ukrw.toLocaleString() : '—')+'</td>'
+            + '<td class="won" style="font-weight:600">'+(it.ukrw ? '₩'+(it.qty*it.ukrw).toLocaleString() : '—')+'</td>'
+            + '</tr>';
+    });
+    html += '<tr class="budget-subtotal">'
+          + '<td colspan="4">소계'+(sec.note ? ' <span style="font-weight:400;color:var(--text-muted);font-size:.75rem">('+sec.note+')</span>' : '')+'</td>'
+          + '<td class="won">₩'+secKrw.toLocaleString()+'</td>'
+          + '</tr></tbody></table></div>';
+  });
+
+  // 하단 총합
+  html += '<div class="budget-grand" style="margin-top:8px">'
+        + '<div><div class="budget-grand-label">💳 총 예상 지출 합계</div>'
+        + '<div class="budget-grand-krw">'+grandVnd.toLocaleString()+' VND</div></div>'
+        + '<div style="text-align:right"><div class="budget-grand-amount">₩'+grandKrw.toLocaleString()+'</div></div>'
+        + '</div>';
+
+
+  body.innerHTML = html;
+}
+
+
+// ── Fresh Schedule (버전 업시 강제 적용) ──
+const FRESH_SCHEDULE = {
+  '2025-05-15': [
+    { id:'s01',  time:'14:00', type:'transport', name:'집에서 출발', note:'오후 2:00 출발 · 오후 3:20 도착 / 유료주차장 이용 · 인천공항 주차장 예약완료 · 1시간소요, 3:20 도착 / 주차비 45,000원, 발렛비 2만원 · 출발 비행기: 5월 15일(금) 18:50' },
+    { id:'s02',  time:'15:30', type:'transport', name:'인천공항 도착', note:'제2여객터미널 3층 중앙 G, H, J 구역 · 최소 인천공항 3시간 전 / 다낭공항 3시간 전 · 아시아나항공 · 최소 3시간 전 출국 준비 · 도어투도어 서비스: 항공권 체크인 시 이용하겠다고 말하기, 도착하면 브릿지 지나서 바로받을 수 있음' },
+    { id:'s03',  time:'15:30', type:'other',     name:'로밍', note:'말똑 2개구입, 이심 or 유심 · ₩12,300' },
+    { id:'s04',  time:'15:30', type:'other',     name:'여행자보험', note:'출국 전 준비 (마이뱅크로 한에 가입 3인 든든플랜) · 전날확인 · ₩34,200 · 마이뱅크' },
+    { id:'s05',  time:'18:30', type:'transport', name:'출국수속', note:'출국수속 체크인 · 교통약자 우대수속 코너 · 유모차 도어투도어서비스 · 항공편 정보: OZ755' },
+    { id:'s06',  time:'18:30', type:'other',     name:'다낭공항 도착 준비', note:'우선수하물X, 핸드폰 유심 말뚝거기 · ₩87,000 · 패스트트랙' },
+    { id:'s07',  time:'18:50', type:'transport', name:'인천공항 출발 ✈ (아시아나 OZ755)', note:'제2터미널 3층 중앙 G,H,J 구역' },
+    { id:'s08',  time:'21:35', type:'transport', name:'다낭 공항 도착', note:'"김희진 님 환영합니다"라고 적힌 픽업 보드를 들고 다낭 공항 도착 홀 앞에서 기다리고 있을 예정 · 팁 2달러 준비, 40만동~22,000원 · 항공편 번호: OZ755 · 픽업 시간: 오후 9시 45분 · 교통비 무료 · 10시 넘으면 안된다고 합니다, 대신 그랩비 지원/출발전 한번 더 문의' },
+    { id:'s09',  time:'21:35', type:'transport', name:'공항픽업 무료서비스 (브릴리언트호텔)', note:'예약완료 · 공항픽업 무료서비스 브릴리언트호텔' },
+    { id:'s10',  time:'22:00', type:'hotel',     name:'브릴리언트호텔 체크인 🏨', note:'10분 소요, 아고다에서 결제 완료 · 예약번호 1710430533 · 바우처 프린트 · 조식 포함, 그랜드 스위트 리버 프런트 더블 · 1인 발마사지 15분, 에프터눈 티, 웰컴 드링크 · 무료생수 3개 커피와 티, 필터교체 필수, 듀벨 · ₩311,584 카드결제 · 돼지코는 우리나라랑 똑같다, 멀티어댑터 챙기기 · 헬스, 수영장, 루프탑바, 클라이밍키즈클럽 등이 있음 · 호텔 도보 한시장, 웰스토어 시내 2분 · https://blog.naver.com/some83/223647379474' },
+    { id:'s11',  time:'23:30', type:'other',     name:'취침', note:'휴식 및 취침 · 첫날은 팁만 준비 · 첫날 환전 현금 팁 정도? 2달러, 아님 환전 x · 카드 결제 아멕스 x / 비자/JCB/마스터 준비 · 카드 또는 현금 결제 다 가능' },
+  ],
+  '2025-05-16': [
+    { id:'s05',  time:'07:30', type:'food',     name:'호텔 조식 2층', note:'조식 오전 6시~10시' },
+    { id:'s06',  time:'09:00', type:'other',    name:'환전 or 출금', note:'마사지샵·한시장·과일가게·로컬식당 · 현금 필수 체크 · 트래블카드에서 현금 필요 atm 200만동 2번 22만원' },
+    { id:'s07',  time:'10:00', type:'activity', name:'핑크성당 구경', note:'핑크성당 구경' },
+    { id:'s08',  time:'10:30', type:'activity', name:'마사지 — 희진 온다마사지샵', note:'90분 코스 1시간반 · 브릴리언트 근처 · 690,000동 / ₩40,000 · 현금 · 예약필요' },
+    { id:'s09',  time:'10:30', type:'activity', name:'성민·유준 — 호텔 수영장·키즈클럽 이용', note:'휴식' },
+    { id:'s10',  time:'12:30', type:'food',     name:'점심', note:'점심 티엔킴, 안토이(예약필수), 나고비엣, 타이호관, 콴푸흥 · 460,000동 / ₩30,000 · 카드' },
+    { id:'s11',  time:'13:30', type:'activity', name:'쇼핑 — 한시장', note:'한시장 1~1시간30분 · 3,500,000동 / ₩200,000 · 현금 · 환전필수 · 현금: 과일·시장비용 22만원·마사지 4만원 / 카드: 식당·카페' },
+    { id:'s12',  time:'15:00', type:'food',     name:'카페', note:'카페, 킬디앤모어 망고빙수·콩카페 · 170,000동 / ₩10,000 · 현금' },
+    { id:'s13',  time:'16:00', type:'other',    name:'휴식', note:'휴식' },
+    { id:'s14',  time:'17:00', type:'transport',name:'이동 — 미케비치', note:'그랩 타고 이동 / 왕복 · 140,000동 / ₩14,000 · 카드 · 그랩이동 · 1시간 바다수영·여벌바지 챙기기' },
+    { id:'s15',  time:'18:00', type:'food',     name:'저녁 — 미케비치 근처 식당', note:'나벨·탐하이산 · 460,000동 / ₩30,000 · 카드 · 돼지코는 우리나라랑 똑같다·멀티어댑터 챙기기·헬스·수영장·루프탑바·클라이밍키즈클럽 등이 있음·호텔 도보 한시장·웰스토어 시내 2분' },
+    { id:'s16',  time:'20:00', type:'hotel',    name:'호텔 복귀 — 휴식', note:'휴식' },
+    { id:'s17',  time:'20:00', type:'activity', name:'루프탑바', note:'870,000동 / ₩50,000' },
+  ],
+  '2025-05-17': [
+    { id:'s10',  time:'08:30', type:'food',      name:'호텔 조식 2층', note:'조식 오전 6시~10시' },
+    { id:'s11',  time:'08:30', type:'other',     name:'환전 or 출금', note:'현금 체크 환전 atm' },
+    { id:'s12',  time:'09:30', type:'activity',  name:'핑크스파 / 네일', note:'예약 필수 / 카톡예약 페디디자인 / 다낭보물창고이용시 등급상관없음 · 젤디자인 페디+핸드 · 830,000동 / ₩47,393 · 현금 · 카톡 예약필요 http://pf.kakao.com/_YNztb · 9:30 오픈 9:30~10:30 · 숙소에서 3분거리 / 현금결제' },
+    { id:'s13',  time:'12:00', type:'hotel',     name:'브릴리언트 호텔 체크아웃', note:'짐보관 후 점심먹기 · 휴식' },
+    { id:'s14',  time:'12:00', type:'food',      name:'점심', note:'점심 티엔킴, 안토이(예약필수), 나고비엣, 타이호관, 콴푸흥 · 460,000동 / ₩30,000 · 카드' },
+    { id:'s15',  time:'13:00', type:'transport', name:'이동 — 그랩 타고 호이안', note:'호이안 이동 / 45분 · 350,000동 / ₩19,985 · 카드 · 그랩 이동' },
+    { id:'s16',  time:'14:00', type:'hotel',     name:'실크센스 리조트 체크인', note:'2시 체크인 가능 · 실크센스 호텔 도착 · 예약완료' },
+    { id:'s17',  time:'15:00', type:'activity',  name:'휴식 및 수영', note:'수영 및 휴식' },
+    { id:'s18',  time:'18:00', type:'food',      name:'저녁 — 호이안 시내 이동', note:'픽드랍 리조트 버스 이용 6시~ 돌아올땐 9시까지 타면됨 · 미리 말해야됨 탈거라고, 그리고 내렸던곳에서 탑승 · 이동 15분 · 무료' },
+    { id:'s19',  time:'18:30', type:'activity',  name:'소원배 탑승 🚣', note:'블로그참고 20분 소요 소원초 5,000동 1만동 가격 / 배는 15~17만동 · 사진 많이 찍으시면 팁 줘야함 · 160,000동 / ₩9,008 · 현금 · 3인 배1개가격 / 흥정해야함 넉넉히 20만동 · 소원초 때로 사야함 1개에 7천~1만동' },
+    { id:'s20',  time:'19:30', type:'food',      name:'저녁식사', note:'야시장 구경, 포마이·마이피·QQ레스토랑 걸어서 3분거리 · QQ레스토랑 미리 예약, 방문 대기 있을 수 있고 저녁 10시까지 운영 · 460,000동 / ₩30,000 · 현금 · 홍정이 판을 치니 꼭 매표소에서 구매' },
+    { id:'s21',  time:'20:30', type:'transport', name:'호텔로 이동', note:'픽드랍 리조트 버스 이용 6시~ 돌아올땐 9시까지 타면됨 · 9시 탑승 · 무료' },
+  ],
+  '2025-05-18': [
+    { id:'s15',  time:'08:00', type:'food',      name:'호텔 조식', note:'조식 오전 06:30~10:00 (뷔페 조식) · 맑은 리조트 앞 마트에서 사먹기 · 유리병 들이 조식 스러움' },
+    { id:'s16',  time:'09:00', type:'activity',  name:'자전거 산책', note:'상황에 따라 패스 / 빨래방 가기 · 실크센스 맞은 편 마트 1kg당 4만동 · 80,000동 / ₩4,496 · 현금 · 리조트 맞은편 마트 spa / 현금결제 · 아침에 맡기고 저녁 7시쯤 찾으러가기' },
+    { id:'s17',  time:'09:30', type:'transport', name:'이동 — 빈원더스·남호이안', note:'남호이안 빈원더스 그랩타고 이동 30분 소요 · 175,000동 / ₩10,000 · 카드 · 그랩 이동 40분' },
+    { id:'s18',  time:'10:00', type:'activity',  name:'빈원더스 입장 🎢', note:'입장권+리버사파리(입장권만 사면 사파리·놀이동산·워터파크 이용가능) · 버기카 티켓은 따로 구입해야함 인당 7,000원(버기카투어 하면 필수) · 입장권은 미리 전날 구입 입장권성인2명 버기카티켓(7만원) · 키 100cm 이하무료 · 1,320,000동 / ₩75,000 · 카드 · 입장권(자유이용권) · 버기카 필수!! 너무 더워서 꼭 · 미리 예약' },
+    { id:'s19',  time:'10:30', type:'activity',  name:'빈원더스 리버사파리 🦁', note:'입장하면 버기카 팔찌 수령 / 버기카타고 리버사파리이동 · 리버사파리 등을 먹이주기는 VIP티켓 매사30분 정각 두번출발 · 인당 7,500원 주가금 · vvip는 한배 10명 기준 12만5천원/보통 조인해서 3팀타면 4만원씩 · 사진은 장당 5천원 · 880,000동 / ₩50,000 · 현금' },
+    { id:'s20',  time:'11:30', type:'activity',  name:'빈원더스 구경', note:'카피바라·소동물체험 · 먹이 6천원+카피바라인형 · 100,000동 / ₩6,000 · 현금 · 먹이주기체험' },
+    { id:'s21',  time:'12:30', type:'transport', name:'이동 — 안방비치', note:'그랩타고 이동 30~40분 · 320,000동 / ₩17,000 · 카드 · 그랩 이동 40분 · 예약완료' },
+    { id:'s22',  time:'13:00', type:'food',      name:'점심 — 안방비치 라풀라주', note:'다도 할인 · 점심 식사·바다 구경 1~3시 · ₩6,000 · 현금 · 수영 및 휴식' },
+    { id:'s23',  time:'15:30', type:'transport', name:'이동 — 호텔', note:'그랩이나 셔틀버스로 이동 10분이내 · 60,000동 / ₩3,000 · 카드 · 이동 10분 · 무료' },
+    { id:'s24',  time:'15:40', type:'hotel',     name:'낮잠 및 휴식', note:'160,000동 / ₩9,008' },
+    { id:'s25',  time:'17:00', type:'activity',  name:'무료 클래스 수업 or 수영', note:'무료 클래스 수업 1시간' },
+    { id:'s26',  time:'18:00', type:'food',      name:'저녁 식사 — 리조트 근처 맛집', note:'an gia·안지아 레스토랑 / tina coffee · 리조트내 걸어서 5분거리 · 260,000동 / ₩15,000 · 현금 · 반쎄오 맛집: 반쎄오·쌀국수·코코넛·모닝글로리 26만동 15,000원 · https://blog.naver.com/inintptp/224107850403' },
+    { id:'s27',  time:'19:00', type:'other',     name:'빨래 픽업 찾으러가기', note:'빨래방 픽업 찾으러가기' },
+    { id:'s28',  time:'19:30', type:'activity',  name:'마사지 — 밤수영 🛁', note:'실크센스리조트 내 마사지 · 밤부마사지 60분은 990,000동 투숙객 20만동 할인 · 44,398원 결제는 체크아웃시 카드 결제 · 페이스트리트먼트는 5만원 · 마지막 예약은 보통 19:30~20:00 전후 · 990,000동 / ₩50,000 · 카드' },
+    { id:'s29',  time:'20:30', type:'hotel',     name:'호텔 휴식', note:'휴식 · 환전이나 트래블카드에서 현금 10만원 필요 atm 178만동 · 카드 결제/선결제예약 16만원 정도' },
+  ],
+  '2025-05-19': [
+    { id:'s30',  time:'08:00', type:'food',      name:'호텔 조식', note:'조식 오전 06:30~10:00 (뷔페 조식)' },
+    { id:'s31',  time:'09:00', type:'activity',  name:'수영 및 산책', note:'오전 수영 9시~11시' },
+    { id:'s32',  time:'11:00', type:'hotel',     name:'리조트 체크아웃 선택', note:'11시 or 레이트 체크아웃 중 선택' },
+    { id:'s33',  time:'12:00', type:'hotel',     name:'레이트 체크아웃 1안 🏨', note:'리조트 레이트 체크아웃 패키지 신청시 3인 300만동 11만원 · 22시까지 / 11시비행기 / 3시간전이니 · 리조트에서 공항까지의 픽업 시간 22:00~ 넘을경우 15만동의 추가금 · 우리는 7시출발 8시 공항도착 예정 · 체크인할때 미리 문의해도 됨 · 점심은 패키지에서 제공 · 저녁도 패키지에서 제공 · 마사지도 패키지에서 제공 · 3,000,000동 / ₩168,300 · 카드 · 저녁 7시 무료 리조트→공항 픽업 서비스' },
+    { id:'s34',  time:'12:00', type:'hotel',     name:'레이트 체크아웃 2안', note:'레이트체크아웃단품 6시까지 · 차량 무료 공항센딩 서비스이용 · 점심은 리조트근처나 나가서' },
+    { id:'s35',  time:'12:00', type:'food',      name:'점심', note:'점심 따로 이용시 3만원 · 460,000동 / ₩30,000 · 현금' },
+    { id:'s36',  time:'13:30', type:'activity',  name:'버기카투어 or 바구니배 🚗', note:'버기카투어 or 바구니배 · 320,000동 / ₩17,000 · 카드 · 미리 예약해야함 · 무료' },
+    { id:'s37',  time:'15:00', type:'activity',  name:'무료 클래스 수업 or 수영', note:'수영 및 휴식' },
+    { id:'s38',  time:'17:00', type:'food',      name:'저녁 식사 — 리조트에서 해결', note:'리조트내 해결 · 260,000동 / ₩15,000 · 카드' },
+    { id:'s39',  time:'18:00', type:'hotel',     name:'체크아웃 준비', note:'체크아웃 · 990,000동 / ₩50,000 · 카드' },
+    { id:'s40',  time:'19:00', type:'transport', name:'공항 센딩 서비스 출발 🚐', note:'귀국 5월19일 화요일 23:00 출발 ~ 새벽 05:55 도착 · 저녁 7시 무료 리조트→공항 픽업 서비스' },
+    { id:'s41',  time:'20:00', type:'transport', name:'다낭 공항 도착', note:'패스트트랙 신청 이용 · 환전이나 트래블카드에서 현금 5만원 필요 atm 178만동' },
+    { id:'s42',  time:'23:00', type:'transport', name:'✈ 다낭 출발 → 인천', note:'OZ755 귀국편 · 5/20 새벽 05:55 인천 도착' },
+  ],
+};
+
+// ── Init ──
+(function injectDanangTrip(){
+  const DANANG_ID = 'danang_2025_05';
+  const CHECKLIST_VER = 'v16'; // bump this to force-refresh checklist
+  // Keep ONLY the Danang trip — remove anything else
+  trips = trips.filter(t=>t.id===DANANG_ID);
+
+  // Force-refresh checklist AND schedule if version mismatch
+  const existing = trips.find(t=>t.id===DANANG_ID);
+  if(existing && existing._clVer !== CHECKLIST_VER){
+    // 체크리스트 업데이트 (체크 상태 유지)
+    const cl = {};
+    for(const [cat, items] of Object.entries(DEFAULT_CHECKLIST)){
+      const oldCat = (existing.checklist||{})[cat] || [];
+      cl[cat] = items.map((text,i)=>{
+        const old = oldCat.find(o=>o.text===text);
+        return {id:'dc_'+cat.charCodeAt(0)+i, text, done: old ? old.done : false};
+      });
+    }
+    existing.checklist = cl;
+
+    // 스케줄 강제 업데이트
+    existing.schedule = FRESH_SCHEDULE;
+
+    existing._clVer = CHECKLIST_VER;
+    save();
+    return;
+  }
+
+  if(!trips.find(t=>t.id===DANANG_ID)){
+    const trip = {
+      id: DANANG_ID,
+      name: '다낭 가족 여행',
+      emoji: '🏖',
+      start: '2025-05-15',
+      end: '2025-05-19',
+      passengers: [
+        { id:'p1', nameEn:'KIM HEEJIN',  nameKo:'김희진', birth:'1990.07.30', passport:'M878S1645', ffn:'아시아나 항공 818842454' },
+        { id:'p2', nameEn:'LEE SUNGMIN', nameKo:'이성민', birth:'1986.03.26', passport:'M37244299',  ffn:'' },
+        { id:'p3', nameEn:'LEE YUJUN',   nameKo:'이유준', birth:'2022.12.03', passport:'M283H8836',  ffn:'' },
+      ],
+      schedule: {
+        '2025-05-15': [
+          { id:'s01', time:'18:50', type:'transport', name:'인천공항 출발 (아시아나 OZ755)', note:'제2터미널 3층 중앙 G,H,J 구역 · 탑승권 사전 발급 권장' },
+          { id:'s02', time:'21:35', type:'transport', name:'다낭 공항 도착', note:'항공편 OZ755 · 호텔 코드: 1710430533' },
+          { id:'s03', time:'21:45', type:'transport', name:'공항 픽업 서비스', note:'운전기사님 "김희진 님 환영합니다" 팻말 · 브릴리언트 호텔행' },
+          { id:'s04', time:'22:30', type:'hotel',     name:'브릴리언트 호텔 체크인', note:'2박 · 예약번호 842363222999 · (+84) 236 322 2999' },
+          { id:'s04b', time:'21:45', type:'transport', name:'브릴리언트 호텔 픽업 확인', note:'✅ 픽업 무료 · 항공편 OZ755 · 픽업 시간 오후 9시 45분 · 예약번호 1710430533 · 운전기사 "김희진 님 환영합니다" 팻말 · 다낭 공항 도착홀 앞 대기 · 문의: customercare@brillianthotel.vn' },
+        ],
+        '2025-05-16': [
+          { id:'s05', time:'07:00', type:'food',     name:'조식 (브릴리언트 호텔)', note:'무료 조식 포함' },
+          { id:'s06', time:'09:00', type:'activity', name:'다낭 시내 관광', note:'그랩 이용 · 공항→시내 약 40분' },
+          { id:'s07', time:'12:00', type:'food',     name:'점심 식사', note:'그랩 음식배달 또는 현지 식당' },
+          { id:'s08', time:'15:00', type:'activity', name:'미케비치', note:'한시장 방향 4~7만동 거리' },
+          { id:'s09', time:'19:00', type:'food',     name:'저녁 식사', note:'한시장 주변' },
+        ],
+        '2025-05-17': [
+          { id:'s10', time:'07:00', type:'food',     name:'조식 (브릴리언트 호텔)', note:'무료 조식 포함' },
+          { id:'s11', time:'10:00', type:'activity', name:'호이안 관광', note:'그랩 40분 · 2만8천~40만동' },
+          { id:'s12', time:'12:00', type:'hotel',    name:'브릴리언트 호텔 체크아웃', note:'12시 체크아웃 · 짐 보관 가능' },
+          { id:'s13', time:'17:00', type:'hotel',    name:'실크센스 호텔 체크인', note:'2박 · 칸안/남편 아고다 예약 · 17~19일' },
+          { id:'s14', time:'19:00', type:'food',     name:'저녁 식사', note:'호이안 올드타운' },
+        ],
+        '2025-05-18': [
+          { id:'s15', time:'07:00', type:'food',     name:'조식 (실크센스 호텔)', note:'풀빌라 · 2베드' },
+          { id:'s16', time:'09:00', type:'activity', name:'호이안 올드타운 투어', note:'무료 픽업센딩 포함' },
+          { id:'s17', time:'14:00', type:'activity', name:'그랜드 스위트 리버프런트', note:'브릴리언트 호텔 특전' },
+          { id:'s18', time:'19:00', type:'food',     name:'저녁 식사', note:'현지 식당' },
+        ],
+        '2025-05-19': [
+          { id:'s19', time:'07:00', type:'food',     name:'조식 (실크센스 호텔)', note:'마지막 조식' },
+          { id:'s20', time:'12:00', type:'hotel',    name:'실크센스 호텔 체크아웃', note:'12시 체크아웃 · 짐 보관 가능' },
+          { id:'s21', time:'21:00', type:'transport', name:'다낭 공항 이동', note:'그랩 이용' },
+          { id:'s22', time:'23:00', type:'transport', name:'다낭 출발 → 인천행', note:'귀국 · 5/20 새벽 05:55 인천 도착' },
+        ],
+      },
+      checklist: (function(){
+        const cl = {};
+        const doneItems = []; // 아직 준비 안 함 — 모두 미체크
+        for(const [cat, items] of Object.entries(DEFAULT_CHECKLIST)){
+          cl[cat] = items.map((text,i)=>({id:'dc_'+cat.charCodeAt(0)+i, text, done: doneItems.includes(text)}));
+        }
+        return cl;
+      })(),
+    };
+    trip._clVer = CHECKLIST_VER;
+    trips.push(trip);
+    save();
+  }
+  save();
+})();
+renderTrips();
+</script>
+</body>
+</html>
