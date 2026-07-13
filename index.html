@@ -126,6 +126,10 @@ textarea.fi{resize:vertical;line-height:1.6}
 .sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
 .st{font-size:1.2rem;font-weight:700}
 @media(max-width:550px){.srow{grid-template-columns:repeat(3,1fr)}.pgrid{grid-template-columns:1fr}.fr{flex-direction:column}}
+
+.emoji-opt{font-size:1.6rem;cursor:pointer;padding:4px;border-radius:8px;border:2px solid transparent;transition:all .15s;line-height:1}
+.emoji-opt:hover{background:var(--sf2)}
+.emoji-opt.active{border-color:var(--ac);background:var(--sf2)}
 </style>
 </head>
 <body>
@@ -138,7 +142,7 @@ textarea.fi{resize:vertical;line-height:1.6}
 </header>
 <div class="app">
   <div class="page active" id="page-home">
-    <div class="sh"><div class="st">나의 해외 여행 &#9992;&#65039;</div></div>
+    <div class="sh"><div class="st">나의 해외 여행 &#9992;&#65039;</div><button class="btnp" onclick="openAddTrip()">+ 새 여행 추가</button></div>
     <div id="home-c"></div>
   </div>
   <div class="page" id="page-detail">
@@ -198,6 +202,34 @@ textarea.fi{resize:vertical;line-height:1.6}
     <div class="fg" style="margin-top:10px"><label>항공사 회원번호</label><input class="fi" id="px-ffn" placeholder="아시아나 818842454"></div>
     <input type="hidden" id="px-id">
     <div class="mf"><button class="btnc" onclick="closeMo('mo-pax')">취소</button><button class="btnp" onclick="savePaxModal()">저장</button></div>
+  </div>
+</div>
+
+
+<!-- Add Trip Modal -->
+<div class="mo" id="mo-trip">
+  <div class="md">
+    <div class="mt">새 여행 만들기 ✈️</div>
+    <div class="fg"><label>여행 이름</label><input class="fi" id="nt-name" placeholder="예: 방콕 가족여행"></div>
+    <div class="fr" style="margin-top:10px">
+      <div class="fg"><label>출발일</label><input class="fi" type="date" id="nt-start"></div>
+      <div class="fg"><label>귀국일</label><input class="fi" type="date" id="nt-end"></div>
+    </div>
+    <div class="fg" style="margin-top:10px"><label>이모지</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px" id="nt-emoji-picker">
+        <span class="emoji-opt active" onclick="pickEmoji(this)">🏖</span>
+        <span class="emoji-opt" onclick="pickEmoji(this)">🗼</span>
+        <span class="emoji-opt" onclick="pickEmoji(this)">🌸</span>
+        <span class="emoji-opt" onclick="pickEmoji(this)">🏔</span>
+        <span class="emoji-opt" onclick="pickEmoji(this)">🌴</span>
+        <span class="emoji-opt" onclick="pickEmoji(this)">🎡</span>
+        <span class="emoji-opt" onclick="pickEmoji(this)">🏯</span>
+        <span class="emoji-opt" onclick="pickEmoji(this)">🗽</span>
+        <span class="emoji-opt" onclick="pickEmoji(this)">🌊</span>
+        <span class="emoji-opt" onclick="pickEmoji(this)">🎑</span>
+      </div>
+    </div>
+    <div class="mf"><button class="btnc" onclick="closeMo('mo-trip')">취소</button><button class="btnp" onclick="createTrip()">만들기</button></div>
   </div>
 </div>
 
@@ -384,6 +416,91 @@ function gotoPage(p) {
 
 document.getElementById('back-btn').onclick = function() { gotoPage('home'); };
 
+
+// ── 7월 다낭 여행 일정 데이터 ──────────────────────────────────
+var SCHED2 = {
+'2026-07-17':[
+  {id:'j1a',t:'17:20',y:'transport',n:'집에서 출발',m:'편명 7C2217 / 출국 07.17(금) 21:30 출발 ~ 07.18(토) 새벽 00:30 도착 (5시간) · 유준이 하원 후 출발 · HA2634237586 / 항복 예약번호 제주항공(7C) · 인천공항 제 1여객터미널 · 주차비 45,000원, 발렛비 2만원 · 반씨쓰기, 저녁 공항에서 먹기 · 예약완료'},
+  {id:'j1b',t:'18:30',y:'transport',n:'인천공항 도착',m:'제주항공 · 제1여객터미널 3층 중앙 G, H, J 구역 · 체크인은 보통 제1터미널 3층 출발층 · 최소 3시간전 출국 준비'},
+  {id:'j1c',t:'18:30',y:'other',    n:'로밍',m:'말똑 2개구입, 이심 · ₩15,000'},
+  {id:'j1d',t:'18:30',y:'other',    n:'여행자보험',m:'출국 전 준비 (마이뱅크로 한번에 가입 3인 든든플랜) · 전날확인 · ₩34,200 · 마이뱅크'},
+  {id:'j1e',t:'21:30',y:'transport',n:'출국수속',m:'교통약자 우대수속 코니, 유모차 도어투도어서비스 · 항공편 명 7C2217'},
+  {id:'j1f',t:'21:30',y:'transport',n:'✈️ 인천공항 출발 (제주항공 7C2217)',m:'패스트트랙 이용 · 우선수하물 X · 핸드폰 유심 말똑 켜기 · ₩87,000 · 패스트트랙'},
+  {id:'j1g',t:'00:30',y:'transport',n:'다낭공항 도착',m:'패스트트랙, 우선수하물X, 핸드폰 유심 말똑켜기 · 패스트트랙'},
+  {id:'j1h',t:'00:30',y:'transport',n:'살라말리아호텔 이동 🚗',m:'호텔측 유료 서비스 픽업 취소함. 그랩타고 이동 · 270,000동 / ₩15,498 · 체크아웃 시 신용카드 결제'},
+  {id:'j1i',t:'01:00',y:'hotel',    n:'살라말리아호텔 체크인 🏨',m:'15분 소요, 아고다에서 결제 완료 · 바우처 프린트 · ₩311,584 · 카드결제 · 레스토랑: 오전 6시 30분 ~ 오후 1시 · 조식: 오전 6시 30분 ~ 오전 9시 30분 · 수영장: 오전 8시 ~ 오후 8시 · 청소 및 유지 보수를 위해 매일 정오 12시부터 오후 2시까지 · 예약완료'},
+  {id:'j1j',t:'01:30',y:'other',    n:'취침',m:'휴식 및 취침'}
+]
+,
+'2026-07-18':[
+  {id:'j2a',t:'07:30',y:'food',     n:'호텔 조식 1층',m:'조식 오전 6시~10시 · 그랩 배달도 가능'},
+  {id:'j2b',t:'08:00',y:'other',    n:'환전 or 출금',m:'https://blog.naver.com/dawon897/224249206914 · ATM 환전 · [ATM 인출방법] 카드 넣기 → 영어 선택 → 비번 6자리 (설정비번+00) → OK → Withdrawal(인출) → Current Account → 원하는 금액 200만동(약 11만원) → 두번 or 한번 적당히 → 영수증 No'},
+  {id:'j2c',t:'10:00',y:'activity', n:'호텔 수영 — 살말리아 수영장',m:'살말리아 호텔 수영장'},
+  {id:'j2d',t:'13:00',y:'food',     n:'점심 — 벰푸온 🍜',m:'미케비치 근처식당 벰푸온_Bepcuon · 예약은 카카오톡 > Bepcuondanang · 그랩타고 이동 · 484,000동 / ₩30,000 · 트래블카드 · 예약'},
+  {id:'j2e',t:'14:00',y:'food',     n:'카페',m:'칼디앤모어 망고빙수, 콩카페, 우베베 · 200,000동 / ₩11,040 · 트래블카드 · 카드'},
+  {id:'j2f',t:'15:00',y:'transport',n:'이동 — 한시장',m:'그랩 타고 이동 / 왕복 · 1시간 시장 구경, 한시장 구경 · 180,000동 / ₩10,000 · 트래블카드 · 그랩이동'},
+  {id:'j2g',t:'17:00',y:'activity', n:'마사지 — 하트스파 💆',m:'80만동 120분 코스 스톤마사지 46,000원 · 35만동 60분 키즈마사지 2만원 · 현지 가서 예약 · 미리 예약시 20%할인과 마사지 후 음료서비스까지 · 카카오톡: kimchi189310 / 온디스파 카카오톡'},
+  {id:'j2h',t:'17:30',y:'activity', n:'저녁 — 미케비치 근처 구경',m:'야시장, 밤바다 구경 · 에그반미 추천'},
+  {id:'j2i',t:'20:00',y:'food',     n:'저녁식사 — 탬하이산',m:'탬하이산이나 그랩에서 시켜서 먹기 · 690,000동 / ₩46,000 · 현금 · 예약해야함'}
+]
+,
+'2026-07-19':[
+  {id:'j3a',t:'07:30',y:'food',     n:'호텔 조식 1층',m:'조식 오전 6시~10시 · 그랩 배달도 가능'},
+  {id:'j3b',t:'08:00',y:'other',    n:'환전 or 출금',m:'https://blog.naver.com/dawon897/224249206914 · ATM 환전 · [ATM 인출방법] 카드 넣기 → 영어 선택 → 비번 6자리 (설정비번+00) → OK → Withdrawal(인출) → Current Account → 원하는 금액 200만동(약 11만원) → 두번 or 한번 적당히 → 영수증 No'},
+  {id:'j3c',t:'10:00',y:'activity', n:'호텔 수영 — 살말리아 수영장 · 미케비치 구경',m:'살말리아 호텔 수영장, 미케비치 구경'},
+  {id:'j3d',t:'12:00',y:'hotel',    n:'체크아웃',m:'짐 보관 서비스'},
+  {id:'j3e',t:'13:30',y:'food',     n:'점심 — 근처 밥집',m:'근처 밥집에서 점심 · 680,000동 / ₩40,000 · 트래블카드 · 카드'},
+  {id:'j3f',t:'14:00',y:'transport',n:'이동 — 그랩 타고 호이안',m:'그랩타고 호이안 · 400,000동 / ₩220,000 · 트래블카드 · 카드 · 1시간'},
+  {id:'j3g',t:'15:00',y:'hotel',    n:'실크센스 리조트 체크인 🏨',m:'실크센스 리조트 2시 체크인 가능'},
+  {id:'j3h',t:'16:30',y:'activity', n:'휴식 및 수영',m:'휴식 및 수영'},
+  {id:'j3i',t:'18:00',y:'transport',n:'저녁 — 호이안 시내 이동',m:'픽드랍 리조트 버스 이용 6시~ · 돌아올땐 9시까지 타면됨 · 미리 말해야됨 탈거라고, 그리고 나온곳에서 탑승 · 이동 15분 · 무료'},
+  {id:'j3j',t:'18:30',y:'activity', n:'소원배 탑승 🚣',m:'블로그참고 20분 소요 · 소원초 5,000동 1만동 가격 / 배는 15~17만동 · 200,000동 / ₩11,300 · 현금 · 3인 1개가격 / 흥정해야함 넉넉히 20만동 · 소원초 따로 사야함 1개에 7천~1만동 · 흥성이 판을 치니 꼭 매표소에서 구매 · 사진 많이 찍으시면 팁 줘야함 5,000동'},
+  {id:'j3k',t:'19:30',y:'food',     n:'저녁식사 — QQ레스토랑 🍜',m:'야시장 구경, 포마이·마이피, QQ레스토랑 걸어서 3분거리 · 7:30 페이스북 예약완료 · 방문 대기 있을 수 있고 저녁 10시까지 운영 · 가지볶음밥, 스페셜스타터, 수박주스, 모닝글로리 · 477,000동 / ₩30,000 · 현금 · 인당 1만원내외 / 다낭 도깨비 10%할인 · 현금결제 5%, 카드결제 8% 세금 · https://cafe.naver.com/f-e/cafes/11547302/popular?t=1775200807665'},
+  {id:'j3l',t:'20:30',y:'transport',n:'호텔로 이동',m:'픽드랍 리조트 버스 이용 · 돌아올땐 9시까지 타면됨 · 9시 탑승 · 무료'}
+]
+,
+'2026-07-20':[
+  {id:'j4a',t:'08:00',y:'food',     n:'호텔 조식',m:'조식 오전 06:30~10:00 (뷔페 조식) · 맑은 리조트 앞 마트에서 사먹기 · 유리병 물이 조식 스타일'},
+  {id:'j4b',t:'09:00',y:'activity', n:'자전거 산책',m:'상황에 따라 패스 / 빨래방 가기 · 실크센스 맞은편 마트 1kg당 4만동 / 환전하기 · 80,000동 / ₩4,496 · 현금 · 리조트 맞은편 마트 spa / 현금결제 · 아침에 맡기고 저녁 7시쯤 찾으러가기'},
+  {id:'j4c',t:'09:30',y:'transport',n:'이동 — 빈원더스 남호이안',m:'남호이안 빈원더스 그랩타고 이동 30분 소요 · 175,000동 / ₩10,000 · 카드 · 그랩 이동 40분'},
+  {id:'j4d',t:'10:00',y:'activity', n:'빈원더스 🎢',m:'입장권+리버사파리(입장권만 사면 사파리, 놀이동산, 워터파크 이용가능) · 성인2명 입장권만 전날 구입 / 100센치미만 아이무료 / 클록구입 · 버기카 티켓은 따로 구입 / 버기카는 걸어다니기 힘들어서 필수 · 입장 후 데스크 현장구매 · 성인 10만동 소인 8만동 / 28만동 = 16,000원 · 클록에서 전기차(버기카)+입장권+vip 사파리 포함 구매시 104,600원 · 1,850,000동 / ₩104,600 · 카드 · 전날 구입 클록 · 입장권 (자유이용권) · 버기카 필수!! 너무 더워서 꼭'},
+  {id:'j4e',t:'10:30',y:'activity', n:'빈원더스 리버사파리 🦁',m:'입장하면 버기카 팔찌 수령 / 버기카타고 리버사파리이동 · 리버사파리 동물 먹이주기는 vip티켓 매30분 정각 두번출발 · 쥐키퍼 체험도 있음 / 카피바라, 소동물체험 · 먹이 6천원+카피바라인형 · 100,000동 / ₩6,000 · 현금 · 먹이주기체험'},
+  {id:'j4f',t:'12:30',y:'transport',n:'이동 — 안방비치',m:'그랩타고 이동 30~40분 · 320,000동 / ₩17,000 · 카드 · 그랩 이동 40분'},
+  {id:'j4g',t:'13:30',y:'food',     n:'점심 — 안방비치 라플라주',m:'라플라주 · 다도 할인 현금만 10%할인 · 점심 식사, 바다 구경 1~3시 · 홍일 오징어 파김름 카리비구이 · 짐보관 가능 / 선베드 무료 / 날이시설 이용 대여가능 / 샤워가능 · 460,000동 / ₩30,000 · 현금 · 수영 및 휴식 · 예약해야함 페이스북 · 예약완료'},
+  {id:'j4h',t:'15:30',y:'transport',n:'이동 — 호텔',m:'그랩이나 셔틀버스로 이동 10분이내 · 60,000동 / ₩3,000 · 카드 · 이동 10분 · 무료'},
+  {id:'j4i',t:'15:40',y:'hotel',    n:'낮잠 및 휴식',m:'160,000동 / ₩9,008'},
+  {id:'j4j',t:'17:00',y:'activity', n:'클래스 수업 or 수영',m:'무료 클래스 수업 or 수영 1시간'},
+  {id:'j4k',t:'18:00',y:'food',     n:'저녁 식사 — 반쎄오 맛집',m:'리조트 근처 맛집 / 예약 x · an gia 안지아 레스토랑 / tina coffee · 리조트내 걸어서 5분거리 · 반쎄오 맛집 · 반쎄오, 쌀국수, 코코넛, 모닝글로리 26만동 15,000원 · https://blog.naver.com/inintptp/224107850403 · 260,000동 / ₩15,000 · 현금 · 실크센스 리조트 근처 맛집 BenTau (PIER Restaurant)'},
+  {id:'j4l',t:'19:00',y:'other',    n:'빨래 픽업 찾으러가기',m:'빨래방 픽업 찾으러가기'},
+  {id:'j4m',t:'19:30',y:'activity', n:'마사지 — 밤수영 🛁',m:'실크센스리조트 내 마사지 / 전날 문의 · 밤부마사지 60분 990,000동 투숙객 20만동 할인 · 44,398원 결제는 체크아웃시 카드 결제 · 페이스트리트먼트는 5만원 · 마지막 예약은 보통 19:30~20:00 전후 · 990,000동 / ₩50,000 · 카드 · 호이안 안토이 추천 - 예약 안해도됨'},
+  {id:'j4n',t:'20:30',y:'hotel',    n:'호텔 휴식',m:'휴식 · 현금 10만원준비 이날 65,000원 현금 세탁비 6천원, 먹이체험 6천원, 점심 3만원, 저녁 2만원' + ' · [ATM 인출방법] 카드 넣기 → 영어 선택 → 비번 6자리 (설정비번+00) → OK → Withdrawal(인출) → Current Account → 원하는 금액 200만동(약 11만원) → 두번 or 한번 적당히 → 영수증 No'}
+]
+,
+'2026-07-21':[
+  {id:'j5a',t:'06:00',y:'food',     n:'호텔 조식',m:'조식 오전 06:30~10:00 (뷔페 조식)'},
+  {id:'j5b',t:'08:30',y:'hotel',    n:'체크아웃 준비',m:'체크아웃'},
+  {id:'j5c',t:'09:00',y:'hotel',    n:'리조트 체크아웃',m:'리조트 레이트체크아웃 9시 / 짐보관 서비스 / 그랩이나 공항드드랍서비스 문의하기 · 무료로 확인완료, 사전전날 데스크에 말하기'},
+  {id:'j5d',t:'09:10',y:'transport',n:'이동 — 출발 🚐',m:'공항 차량서비스나 그랩 부르기 · 1시간 소요'},
+  {id:'j5e',t:'10:10',y:'transport',n:'다낭공항 도착',m:'패스트트랙 신청 이용'},
+  {id:'j5f',t:'11:00',y:'food',     n:'점심',m:'공항에서 점심 · 카드 점심 5만원, 저녁 5만원'},
+  {id:'j5g',t:'13:10',y:'transport',n:'✈️ 다낭 출발 → 인천',m:'07.21(화) 13:10 출발 ~ 07.21(화) 19:55 도착 · 귀국편'}
+]
+};
+var _aday2 = Object.keys(SCHED2)[0];
+var _uev2  = JSON.parse(localStorage.getItem('tg_uev2') || '{}');
+var _ed2   = JSON.parse(localStorage.getItem('tg_ed2')  || '{}');
+var _xp2   = {};
+Object.keys(_uev2).forEach(function(d) {
+  if (!SCHED2[d]) SCHED2[d] = [];
+  _uev2[d].forEach(function(ev) {
+    if (!SCHED2[d].find(function(e) { return e.id === ev.id; })) SCHED2[d].push(ev);
+  });
+});
+function suev2() { localStorage.setItem('tg_uev2', JSON.stringify(_uev2)); }
+
+var _extraTrips = JSON.parse(localStorage.getItem('tg_extra_trips') || '[]');
+var _activeExtra = null;
+
 function renderHome() {
   var all  = Object.values(CL).reduce(function(a, b) { return a.concat(b); }, []);
   var done = all.filter(function(t) { return _ck[TRIP.id + '_' + t]; }).length;
@@ -391,8 +508,11 @@ function renderHome() {
   var nights = Math.round((new Date(TRIP.end) - new Date(TRIP.start)) / 86400000);
   var el = document.getElementById('home-c');
   el.innerHTML = '';
+
+  // 다낭 메인 카드
   var card = document.createElement('div');
   card.className = 'tc';
+  card.style.marginBottom = '14px';
   card.innerHTML = '<div class="tc-em">' + TRIP.emoji + '</div>'
     + '<div class="tc-nm">' + TRIP.name + '</div>'
     + '<div class="tc-dt">' + TRIP.start + ' ~ ' + TRIP.end + ' (' + nights + '박)</div>'
@@ -400,10 +520,184 @@ function renderHome() {
     + '<div class="prog-l">체크리스트 ' + done + '/' + all.length + ' (' + pct + '%)</div>'
     + '<div style="margin-top:14px"><button class="btnp" id="open-trip-btn">열기</button></div>';
   el.appendChild(card);
-  card.addEventListener('click', function() { gotoPage('detail'); });
+  card.addEventListener('click', function() { _activeExtra = null; gotoPage('detail'); });
   document.getElementById('open-trip-btn').addEventListener('click', function(e) {
-    e.stopPropagation(); gotoPage('detail');
+    e.stopPropagation(); _activeExtra = null; gotoPage('detail');
   });
+
+  // 추가 여행 카드들
+  _extraTrips.forEach(function(trip, i) {
+    var n2 = Math.round((new Date(trip.end) - new Date(trip.start)) / 86400000);
+    var ec = document.createElement('div');
+    ec.style.cssText = 'background:var(--sf);border-radius:var(--r);border:1px solid var(--bd);padding:20px;position:relative;overflow:hidden;cursor:pointer;margin-bottom:14px';
+    ec.innerHTML = '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#a78bfa,var(--ac3))"></div>'
+      + '<div style="font-size:2rem;margin-bottom:8px">' + trip.emoji + '</div>'
+      + '<div style="font-size:1.2rem;font-weight:700;margin-bottom:4px">' + trip.name + '</div>'
+      + '<div style="font-size:.82rem;color:var(--mu);margin-bottom:14px">' + trip.start + ' ~ ' + trip.end + ' (' + n2 + '박)</div>'
+      + '<div style="display:flex;gap:8px;margin-top:14px">'
+      + '<button class="btnp" style="background:linear-gradient(90deg,#a78bfa,var(--ac3))" data-extra-open="'+i+'">열기</button>'
+      + '<button class="btna" data-extra-del="'+i+'">삭제</button>'
+      + '</div>';
+    ec.addEventListener('click', function(e) {
+      if (e.target.dataset.extraDel !== undefined) {
+        if (confirm('이 여행을 삭제할까요?')) {
+          _extraTrips.splice(parseInt(e.target.dataset.extraDel), 1);
+          localStorage.setItem('tg_extra_trips', JSON.stringify(_extraTrips));
+          renderHome();
+        }
+        return;
+      }
+      if (e.target.dataset.extraOpen !== undefined || e.target === ec) {
+        _activeExtra = trip;
+        openExtraTrip(trip);
+      }
+    });
+    el.appendChild(ec);
+  });
+}
+
+function openExtraTrip(trip) {
+  document.getElementById('btn-detail').style.display = '';
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('page-detail').classList.add('active');
+  document.querySelectorAll('.tbtn').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('btn-detail').classList.add('active');
+  var nights = Math.round((new Date(trip.end) - new Date(trip.start)) / 86400000);
+  document.getElementById('dtitle').textContent = trip.emoji + ' ' + trip.name;
+  document.getElementById('dsub').textContent = trip.start + ' ~ ' + trip.end + ' · ' + nights + '박' + (nights+1) + '일';
+  // 7월 다낭 여행이면 SCHED2 사용, 그 외 빈 화면
+  var sched = (trip.id && trip.id.indexOf('july') >= 0) ? SCHED2 : null;
+  // id 없어도 이름으로 매칭
+  if (!sched && trip.name && (trip.name.indexOf('7월') >= 0 || trip.name.indexOf('살라') >= 0 || trip.name.indexOf('미케비치') >= 0)) sched = SCHED2;
+  if (!sched && trip.start && trip.start.indexOf('2026-07-17') >= 0) sched = SCHED2;
+  var evtotal = sched ? Object.values(sched).reduce(function(a,b){return a+b.length;},0) : 0;
+  document.getElementById('dstats').innerHTML =
+    '<div class="sc"><div class="sc-l">여행 일수</div><div class="sc-v a">'+(nights+1)+'<span style="font-size:.9rem;font-weight:400">일</span></div></div>'
+    +'<div class="sc"><div class="sc-l">일정 등록</div><div class="sc-v b">'+evtotal+'<span style="font-size:.9rem;font-weight:400">개</span></div></div>'
+    +'<div class="sc"><div class="sc-l">체크 완료</div><div class="sc-v c">0<span style="font-size:.9rem;font-weight:400">/0</span></div></div>';
+  ['schedule','checklist','passengers','reservations','budget'].forEach(function(t) {
+    document.getElementById('panel-'+t).style.display = t==='schedule'?'block':'none';
+  });
+  document.querySelectorAll('.itab').forEach(function(b,i) { b.classList.toggle('active', i===0); });
+  if (sched) {
+    rSchedExtra(sched);
+  } else {
+    document.getElementById('panel-schedule').innerHTML =
+      '<div style="padding:48px 20px;text-align:center;color:var(--mu)">'
+      + '<div style="font-size:3rem;margin-bottom:12px">🗓</div>'
+      + '<div style="font-size:1rem;font-weight:600;color:var(--tx);margin-bottom:8px">' + trip.name + '</div>'
+      + '<div style="font-size:.85rem">일정을 준비 중이에요!<br>곧 여기에 일정이 채워질 거예요 ✈️</div>'
+      + '</div>';
+  }
+}
+
+function rSchedExtra(sched) {
+  var days = Object.keys(sched);
+  if (!days.includes(_aday2)) _aday2 = days[0];
+  var now = new Date();
+  var panel = document.getElementById('panel-schedule');
+  panel.innerHTML = '';
+
+  // Day tab bar
+  var dtbar = document.createElement('div');
+  dtbar.className = 'dtbar';
+  days.forEach(function(d, i) {
+    var cnt = sched[d].length, dow = DOW[new Date(d).getDay()];
+    var btn = document.createElement('button');
+    btn.className = 'dt' + (d === _aday2 ? ' active' : '');
+    btn.innerHTML = '<span class="dt-n">Day ' + (i+1) + '</span><span class="dt-d">' + dow + '</span>'
+      + (cnt ? '<span class="dt-c">' + cnt + '</span>' : '');
+    btn.addEventListener('click', (function(day) { return function() { _aday2 = day; rSchedExtra(sched); }; })(d));
+    dtbar.appendChild(btn);
+  });
+  panel.appendChild(dtbar);
+
+  var d = _aday2, dow = DOW[new Date(d).getDay()];
+  var evs = (sched[d]||[]).slice().sort(function(a,b){return a.t.localeCompare(b.t);});
+
+  var dh = document.createElement('div');
+  dh.className = 'dh';
+  dh.innerHTML = '<span class="dbadge">' + d + '</span><span class="ddow">' + dow + '요일</span>';
+  panel.appendChild(dh);
+
+  var tl = document.createElement('div');
+  tl.className = 'tl';
+  evs.forEach(function(ev) {
+    var chips = ev.m ? ev.m.split('·').map(function(c){return c.trim();}).filter(Boolean) : [];
+    var has = chips.length > 0;
+    var done = !!_ed2[ev.id], exp = !!_xp2[ev.id];
+    var past = new Date(d+'T'+ev.t+':00') < now;
+    var show = has && (!past || exp);
+
+    var item = document.createElement('div');
+    item.className = 'tli';
+    var dot = document.createElement('div');
+    dot.className = 'tldot ' + ev.y;
+    item.appendChild(dot);
+
+    var card = document.createElement('div');
+    card.className = 'tlc' + (done?' done':'') + (past&&!done?' past':'');
+
+    var head = document.createElement('div');
+    head.className = 'tlch';
+    if (past && has) { head.style.cursor='pointer'; head.addEventListener('click', (function(id){return function(){_xp2[id]=!_xp2[id];rSchedExtra(sched);};})(ev.id)); }
+
+    var db = document.createElement('button');
+    db.className = 'tldb' + (done?' ck':'');
+    db.innerHTML = done ? '<svg width="11" height="11" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#000" stroke-width="2" fill="none"/></svg>' : '';
+    db.addEventListener('click', (function(id){return function(e){e.stopPropagation();_ed2[id]=!_ed2[id];if(!_ed2[id])delete _ed2[id];localStorage.setItem('tg_ed2',JSON.stringify(_ed2));rSchedExtra(sched);};})(ev.id));
+
+    var timeEl = document.createElement('span'); timeEl.className='tltime'; timeEl.textContent=ev.t||'--:--';
+    var badge = document.createElement('span'); badge.className='tlbadge '+ev.y; badge.textContent=TL[ev.y||'other'];
+    var nameEl = document.createElement('span'); nameEl.className='tlnm'; nameEl.textContent=ev.n;
+
+    head.appendChild(db); head.appendChild(timeEl); head.appendChild(badge); head.appendChild(nameEl);
+    if (past) { var pb=document.createElement('span'); pb.className='tlpast'+(done?' done':''); pb.textContent=done?'완료':'지남'; head.appendChild(pb); }
+    if (past&&has) { var arr=document.createElement('span'); arr.className='tlarr'; arr.textContent=exp?'▴':'▾'; head.appendChild(arr); }
+    card.appendChild(head);
+
+    if (show) {
+      var nb = document.createElement('div'); nb.className='tlnb';
+      chips.forEach(function(c) {
+        var hl = c.indexOf('무료')>=0||c.indexOf('예약')>=0||c.indexOf('완료')>=0||c.indexOf('⚠️')>=0;
+        var nl = document.createElement('div'); nl.className='tlnl'+(hl?' hl':'');
+        var nd = document.createElement('span'); nd.className='tlnd';
+        nl.appendChild(nd); nl.appendChild(document.createTextNode(c)); nb.appendChild(nl);
+      });
+      card.appendChild(nb);
+    }
+    item.appendChild(card);
+    tl.appendChild(item);
+  });
+  if (!evs.length) tl.innerHTML = '<div style="padding:28px;text-align:center;color:var(--mu);font-size:.85rem">이 날 일정이 없어요</div>';
+  panel.appendChild(tl);
+}
+
+function openAddTrip() {
+  document.getElementById('nt-name').value = '';
+  document.getElementById('nt-start').value = '';
+  document.getElementById('nt-end').value = '';
+  document.querySelectorAll('.emoji-opt').forEach(function(e, i) { e.classList.toggle('active', i===0); });
+  document.getElementById('mo-trip').classList.add('open');
+}
+
+function pickEmoji(el) {
+  document.querySelectorAll('.emoji-opt').forEach(function(e) { e.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+function createTrip() {
+  var name  = document.getElementById('nt-name').value.trim();
+  var start = document.getElementById('nt-start').value;
+  var end   = document.getElementById('nt-end').value;
+  var emoji = (document.querySelector('.emoji-opt.active') || {}).textContent || '✈️';
+  if (!name)  { alert('여행 이름을 입력해주세요.'); return; }
+  if (!start) { alert('출발일을 선택해주세요.'); return; }
+  if (!end)   { alert('귀국일을 선택해주세요.'); return; }
+  _extraTrips.push({id: 'trip_' + Date.now(), name: name, start: start, end: end, emoji: emoji});
+  localStorage.setItem('tg_extra_trips', JSON.stringify(_extraTrips));
+  closeMo('mo-trip');
+  renderHome();
 }
 
 function renderDetail() {
